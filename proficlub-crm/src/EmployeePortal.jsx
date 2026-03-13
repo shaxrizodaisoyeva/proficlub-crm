@@ -133,9 +133,13 @@ function LoginScreen({ onLogin }) {
     setError('');
     setLoading(true);
     setTimeout(() => {
+      let formattedDob = dob.trim();
+      if (/^\d{8}$/.test(formattedDob)) {
+        formattedDob = `${formattedDob.slice(4)}-${formattedDob.slice(2,4)}-${formattedDob.slice(0,2)}`;
+     }
       const found = SAMPLE_EMPLOYEES.find(
-        e => e.name.toLowerCase().trim() === name.toLowerCase().trim() && e.birthDate === dob
-      );
+      e => e.name.toLowerCase().trim() === name.toLowerCase().trim() && e.birthDate === formattedDob
+);
       if (found) {
         onLogin(found);
       } else {

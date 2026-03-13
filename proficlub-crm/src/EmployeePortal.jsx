@@ -171,6 +171,7 @@ function LoginScreen({ onLogin }) {
           type="date"
           value={dob}
           onChange={e => setDob(e.target.value)}
+          placeholder="1995-04-12"
           style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #E0E0E0', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 20, background: '#FAFAFA' }}
         />
 

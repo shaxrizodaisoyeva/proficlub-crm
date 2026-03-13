@@ -168,10 +168,10 @@ function LoginScreen({ onLogin }) {
 
         <label style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Туғилган сана</label>
         <input
-          type="date"
+          type="text"
           value={dob}
           onChange={e => setDob(e.target.value)}
-          placeholder="1995-04-12"
+          placeholder="12041995"
           style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #E0E0E0', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 20, background: '#FAFAFA' }}
         />
 

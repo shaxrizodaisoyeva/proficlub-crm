@@ -751,7 +751,7 @@ export default function App() {
                 <label style={LBL}>Тренинг номи</label>
                 <input value={newTr.title} onChange={e=>setNewTr(p=>({...p,title:e.target.value}))} placeholder="Тренинг номи" style={{ ...SI, marginBottom:10 }} />
                 <label style={LBL}>Сана</label>
-                <input type="date" value={newTr.date} onChange={e=>setNewTr(p=>({...p,date:e.target.value}))} style={{ ...SI, marginBottom:10 }} />
+                <input type="text" value={newTr.date} onChange={e=>setNewTr(p=>({...p,date:e.target.value}))} placeholder="2025-03-18" style={{ ...SI, marginBottom:10 }} />
                 <label style={LBL}>Очиқ саволлар</label>
                 {newTr.questions.map((q,i)=>(
                   <div key={i} style={{ display:'flex', gap:6, marginBottom:6 }}>

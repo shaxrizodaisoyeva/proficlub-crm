@@ -205,7 +205,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               <KPI icon="✅" label="Ўтиш даражаси" value={`${passRate}%`} sub={`${passed.length} та ўтди`} color={passRate>=70?'#2E7D32':'#C62828'} />
               <KPI icon="👥" label="Жами" value={withResult.length} sub={`${employees.length-withResult.length} та қолди`} />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
               <div style={{ ...CARD, marginBottom:0, display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
                 <div style={{ fontWeight:800, fontSize:14, alignSelf:'flex-start' }}>Ўтиш нисбати</div>
                 <DonutChart passed={passed.length} failed={withResult.length-passed.length} />
@@ -669,7 +669,7 @@ export default function App() {
               </div>
 
               {empTab==='info' && (
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
                   {fields.map(f=>{
                     const val = editing ? editData[f.key] : selEmp[f.key]
                     if (!editing && !val) return null

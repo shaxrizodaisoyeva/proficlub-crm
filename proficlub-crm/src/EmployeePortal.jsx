@@ -238,9 +238,10 @@ function TrainingsTab({ employee, trainings }) {
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [filter, setFilter] = useState('all');
 
+  const today = new Date().toISOString().slice(0,10);
   const filtered = filter === 'all' ? trainings
-    : filter === 'upcoming' ? trainings.filter(t => t.status === 'upcoming')
-    : trainings.filter(t => t.status === 'completed');
+    : filter === 'upcoming' ? trainings.filter(t => t.date >= today)
+    : trainings.filter(t => t.date < today);
 
   if (selected) {
     const t = selected;

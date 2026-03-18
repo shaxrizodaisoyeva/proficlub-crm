@@ -240,7 +240,8 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
                 { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
               ].map(({ label, arr, border, titleColor, medals, medalText='#fff' }) => (
-                <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>
+               arr.length === 0 && label.includes('Эътибор') ? null :
+               <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>
                   <div style={{ fontWeight:800, fontSize:14, marginBottom:12, color:titleColor }}>{label}</div>
                   {arr.map((x,i)=>(
                     <div key={x.emp.id} onClick={()=>onViewEmployee(x.emp.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #F5F5F5', cursor:'pointer' }}>

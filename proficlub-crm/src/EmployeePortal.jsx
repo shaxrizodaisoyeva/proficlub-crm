@@ -430,9 +430,16 @@ function ProfileTab({ employee, onLogout }) {
   const fields = [
     { label: 'Лавозим', value: employee.role },
     { label: 'Иш бошлаган сана', value: employee.hireDate },
+    { label: 'Маълумоти', value: employee.educationLevel },
     { label: 'Таълим муассасаси', value: employee.education },
     { label: 'Мутахассислик', value: employee.specialty },
     { label: 'Телефон', value: employee.phone },
+    { label: 'Ҳудуд', value: employee.region },
+    { label: 'Ташкилот', value: employee.organization },
+    { label: 'Охирги 6 ой савдо', value: employee.sales6Month },
+    { label: 'Жамоасидаги ходимлар сони', value: employee.teamSize },
+    { label: 'Ходимлар алмашуви', value: employee.staffTurnover },
+    { label: 'Курслар', value: employee.courses },
   ].filter(f => f.value);
 
   return (

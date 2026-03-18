@@ -640,7 +640,10 @@ export default function App() {
               <div style={{ ...CARD, display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                 <Avatar name={selEmp.name} size={50} />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:19, fontWeight:800 }}>{selEmp.name}</div>
+                  {editing 
+                    ? <input value={editData.name||''} onChange={e=>setEditData(p=>({...p,name:e.target.value}))} style={{ ...SI, fontSize:17, fontWeight:800, maxWidth:300 }} />
+                    : <div style={{ fontSize:19, fontWeight:800 }}>{selEmp.name}</div>
+                  }
                   <div style={{ marginTop:5, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                     <Badge role={selEmp.role} />
                     {selEmp.hireDate && <span style={{ fontSize:11, color:'#888' }}>Иш бошлаган: {selEmp.hireDate}</span>}

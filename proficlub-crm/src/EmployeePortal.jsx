@@ -1,94 +1,5 @@
 import { useState, useEffect } from "react";
-
-// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
-const SAMPLE_EMPLOYEES = [
-  {
-    id: 1, name: "Абдуллаева Зарина", role: "МП", birthDate: "1995-04-12",
-    hireDate: "2022-04-10", education: "Тошкент Фармацевтика институти",
-    specialty: "Фармация", phone: "+998 90 123 45 67",
-    examResults: [
-      { trainingId: 1, totalScore: 85, passed: true, date: "2024-03-10", mcScore: 85, openAnswers: [{ q: "Корпоратив этика нима?", a: "Ходимлар ҳуқуқини ҳимоя қилиш." }] },
-      { trainingId: 2, totalScore: 92, passed: true, date: "2024-01-25", mcScore: 92, openAnswers: [{ q: "Маҳсулот тавсифи?", a: "Юқори сифатли дори воситалари." }] },
-    ]
-  },
-  {
-    id: 2, name: "Азизов Жонибек", role: "Менежер", birthDate: "1990-07-23",
-    hireDate: "2021-03-15", education: "ТошДТУ", specialty: "Менежмент",
-    phone: "+998 91 234 56 78",
-    examResults: [
-      { trainingId: 1, totalScore: 75, passed: true, date: "2024-03-10", mcScore: 75, openAnswers: [{ q: "Корпоратив этика нима?", a: "Ишда маданиятли хулқ-атвор." }] },
-    ]
-  },
-  {
-    id: 3, name: "Алиев Жамшид", role: "МП", birthDate: "1993-11-05",
-    hireDate: "2022-08-01", education: "СамДУ", specialty: "Биология",
-    phone: "+998 93 345 67 89",
-    examResults: [
-      { trainingId: 1, totalScore: 87, passed: true, date: "2024-03-10", mcScore: 87, openAnswers: [] },
-      { trainingId: 3, totalScore: 90, passed: true, date: "2023-11-15", mcScore: 90, openAnswers: [] },
-    ]
-  },
-  {
-    id: 4, name: "Алимова Феруза", role: "Администратор", birthDate: "1988-02-28",
-    hireDate: "2020-06-01", education: "ТошДУ", specialty: "Иқтисодиёт",
-    phone: "+998 94 456 78 90",
-    examResults: [
-      { trainingId: 1, totalScore: 91, passed: true, date: "2024-03-10", mcScore: 91, openAnswers: [] },
-      { trainingId: 2, totalScore: 88, passed: true, date: "2024-01-25", mcScore: 88, openAnswers: [] },
-      { trainingId: 3, totalScore: 94, passed: true, date: "2023-11-15", mcScore: 94, openAnswers: [] },
-    ]
-  },
-  {
-    id: 5, name: "Каримова Дилноза", role: "МП", birthDate: "1997-09-14",
-    hireDate: "2023-02-20", education: "АндДУ", specialty: "Фармация",
-    phone: "+998 95 567 89 01",
-    examResults: [
-      { trainingId: 2, totalScore: 79, passed: true, date: "2024-01-25", mcScore: 79, openAnswers: [] },
-    ]
-  },
-];
-
-const SAMPLE_TRAININGS = [
-  {
-    id: 1, title: "Корпоратив этика ва хулқ-атвор", date: "2024-03-05",
-    status: "completed", questions: ["Корпоратив этика нима?", "Можаро вазиятида қандай?"],
-    materials: [
-      { name: "Корпоратив этика қўлланма.pdf", size: "2.4 МБ", url: "#" },
-      { name: "Презентация слайдлар.pptx", size: "5.1 МБ", url: "#" },
-    ],
-    homework: false,
-  },
-  {
-    id: 2, title: "Маҳсулот билими тренинги", date: "2024-01-20",
-    status: "completed", questions: ["Маҳсулот тавсифи?"],
-    materials: [
-      { name: "Дори воситалари каталоги.pdf", size: "8.7 МБ", url: "#" },
-    ],
-    homework: false,
-  },
-  {
-    id: 3, title: "Клиник тақдимот кўникмалари", date: "2023-11-10",
-    status: "completed", questions: ["Врач билан суҳбатда қандай ёндашув?"],
-    materials: [],
-    homework: false,
-  },
-  {
-    id: 4, title: "Самарали савдо техникаси", date: "2026-04-15",
-    status: "upcoming", questions: [],
-    materials: [
-      { name: "Дастурий материал.pdf", size: "3.2 МБ", url: "#" },
-    ],
-    homework: true,
-    homeworkDesc: "Ўз ҳудудингиздаги охирги ой савдо натижалари таҳлилини тайёрланг (1-2 бет).",
-    homeworkDeadline: "2026-04-10",
-  },
-  {
-    id: 5, title: "Рақамли маркетинг асослари", date: "2026-05-20",
-    status: "upcoming", questions: [],
-    materials: [],
-    homework: false,
-  },
-];
+import { supabase } from './lib/supabase';
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const ROLE_COLORS = {
@@ -129,24 +40,41 @@ function LoginScreen({ onLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin() {
     setError('');
     setLoading(true);
-    setTimeout(() => {
-    let formattedDob = dob.trim();
-    if (/^\d{8}$/.test(formattedDob)) {
+    try {
+      let formattedDob = dob.trim();
+      if (/^\d{8}$/.test(formattedDob)) {
         formattedDob = `${formattedDob.slice(4)}-${formattedDob.slice(2,4)}-${formattedDob.slice(0,2)}`;
-     }
-    const found = SAMPLE_EMPLOYEES.find(
-      e => e.name.toLowerCase().trim() === name.toLowerCase().trim() && e.birthDate === formattedDob
-     );
-      if (found) {
-        onLogin(found);
-      } else {
-        setError('Исм ёки туғилган сана нотўғри. Қайта уриниб кўринг.');
       }
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .ilike('name', name.trim())
+        .single();
+      if (error || !data) {
+        setError('Исм ёки туғилган сана нотўғри. Қайта уриниб кўринг.');
+        return;
+      }
+      const empDob = data.data?.birthDate;
+      if (empDob !== formattedDob) {
+        setError('Исм ёки туғилган сана нотўғри. Қайта уриниб кўринг.');
+        return;
+      }
+      const emp = {
+        id: data.id,
+        name: data.name,
+        role: data.role,
+        examResults: data.exam_results ?? [],
+        ...data.data,
+      };
+      onLogin(emp);
+    } catch(e) {
+      setError('Хатолик юз берди. Қайта уриниб кўринг.');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   }
 
   return (
@@ -172,10 +100,9 @@ function LoginScreen({ onLogin }) {
 
         <label style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Туғилган сана</label>
         <input
-          type="text"
+          type="date"
           value={dob}
           onChange={e => setDob(e.target.value)}
-          placeholder="12041995"
           style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #E0E0E0', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 20, background: '#FAFAFA' }}
         />
 
@@ -194,7 +121,7 @@ function LoginScreen({ onLogin }) {
         </button>
 
         <div style={{ marginTop: 16, padding: '12px 14px', background: '#F0F4FF', borderRadius: 10, fontSize: 12, color: '#1565C0' }}>
-          💡 <strong>Намуна:</strong> Абдуллаева Зарина / 1995-04-12
+          💡 Исм-фамилияни тўлиқ кириτинг ва туғилган санани <strong>КККK-ОО-КК</strong> форматида ёзинг. Масалан: 1990-05-14 ёки 14051990
         </div>
       </div>
     </div>

@@ -100,7 +100,7 @@ function LoginScreen({ onLogin }) {
 
         <label style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Туғилган сана</label>
         <input
-          type="date"
+          type="text"
           value={dob}
           onChange={e => setDob(e.target.value)}
           style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #E0E0E0', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 20, background: '#FAFAFA' }}
@@ -121,7 +121,7 @@ function LoginScreen({ onLogin }) {
         </button>
 
         <div style={{ marginTop: 16, padding: '12px 14px', background: '#F0F4FF', borderRadius: 10, fontSize: 12, color: '#1565C0' }}>
-          💡 Исм-фамилияни тўлиқ кириτинг ва туғилган санани <strong>КККK-ОО-КК</strong> форматида ёзинг. Масалан: 1990-05-14 ёки 14051990
+          💡 <strong>Намуна:</strong> Абдуллаева Зарина / 14041995
         </div>
       </div>
     </div>

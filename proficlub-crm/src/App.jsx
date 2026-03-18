@@ -17,6 +17,7 @@ const ROLE_COLORS = {
 const ROLE_FIELDS = {
   'Менежер': [
     { key:'birthDate',     label:'Туғилган санаси',                    type:'date' },
+    { key:'educationLevel',label:'Маълумоти',                          type:'text' },
     { key:'education',     label:'Таълим муассасаси',                  type:'text' },
     { key:'specialty',     label:'Дипломдаги мутахассислик',           type:'text' },
     { key:'courses',       label:'Курслар / малака ошириш',            type:'text' },
@@ -29,12 +30,12 @@ const ROLE_FIELDS = {
   ],
   'МП': [
     { key:'birthDate',     label:'Туғилган санаси',                    type:'date' },
+    { key:'educationLevel',label:'Маълумоти',                          type:'text' },
     { key:'education',     label:'Таълим муассасаси',                  type:'text' },
     { key:'specialty',     label:'Дипломдаги мутахассислик',           type:'text' },
     { key:'courses',       label:'Курслар / малака ошириш',            type:'textarea' },
     { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
     { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
-    { key:'staffTurnover', label:'Ходимлар алмашуви',                  type:'textarea' },
   ],
   'Оператор': [
     { key:'birthDate',        label:'Туғилган санаси',                 type:'date' },

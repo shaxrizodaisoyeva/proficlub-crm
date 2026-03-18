@@ -482,9 +482,9 @@ export default function EmployeePortal() {
       </div>
 
       {/* Content */}
-      {tab === 'home'      && <HomeTab employee={employee} trainings={SAMPLE_TRAININGS} onNavigate={handleNavigate} />}
-      {tab === 'trainings' && <TrainingsTab employee={employee} trainings={SAMPLE_TRAININGS} />}
-      {tab === 'results'   && <ResultsTab employee={employee} trainings={SAMPLE_TRAININGS} />}
+      {tab === 'home'      && <HomeTab employee={employee} trainings={trainings} onNavigate={handleNavigate} />}
+      {tab === 'trainings' && <TrainingsTab employee={employee} trainings={trainings} />}
+      {tab === 'results'   && <ResultsTab employee={employee} trainings={trainings} />}
       {tab === 'profile'   && <ProfileTab employee={employee} onLogout={() => setEmployee(null)} />}
 
       <BottomNav tab={tab} setTab={setTab} />

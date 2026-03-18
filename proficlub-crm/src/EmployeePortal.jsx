@@ -475,6 +475,30 @@ export default function EmployeePortal() {
   const [trainings, setTrainings] = useState([]);
   const [tab, setTab] = useState('home');
 
+  useEffect(() => {
+    async function loadTrainings() {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from('trainings')
+        .select('*')
+        .order('date', { ascending: false });
+      if (!error && data) {
+        setTrainings(data.map(row => ({
+          id: row.id,
+          title: row.title,
+          date: row.date,
+          status: row.date >= today ? 'upcoming' : 'completed',
+          questions: row.questions ?? [],
+          materials: row.materials ?? [],
+          homework: row.homework ?? false,
+          homeworkDesc: row.homework_desc ?? null,
+          homeworkDeadline: row.homework_deadline ?? null,
+        })));
+      }
+    }
+    loadTrainings();
+  }, []);
+
   function handleNavigate(t) { setTab(t); }
 
   if (!employee) {

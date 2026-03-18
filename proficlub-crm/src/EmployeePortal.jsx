@@ -464,6 +464,7 @@ function ProfileTab({ employee, onLogout }) {
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function EmployeePortal() {
   const [employee, setEmployee] = useState(null);
+  const [trainings, setTrainings] = useState([]);
   const [tab, setTab] = useState('home');
 
   function handleNavigate(t) { setTab(t); }

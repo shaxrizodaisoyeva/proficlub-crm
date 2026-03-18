@@ -23,7 +23,7 @@ const ROLE_FIELDS = {
     { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
     { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
     { key:'planPercent',   label:'Савдо режаси (%)',                   type:'number' },
-    { key:'promoList',     label:'Промосия дорилар рўйхати',           type:'textarea' },
+    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'textarea' },
     { key:'teamSize',      label:'Жамоасидаги ходимлар сони',          type:'number' },
     { key:'staffTurnover', label:'Ходимлар алмашуви',                  type:'textarea' },
   ],
@@ -672,6 +672,7 @@ export default function App() {
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   {fields.map(f=>{
                     const val = editing ? editData[f.key] : selEmp[f.key]
+                    if (!editing && !val) return null
                     return (
                       <div key={f.key} style={{ ...CARD, gridColumn:f.type==='textarea'?'1/-1':'auto', marginBottom:0 }}>
                         <label style={LBL}>{f.label}</label>
@@ -679,13 +680,13 @@ export default function App() {
                           ? f.type==='textarea'
                             ? <textarea value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} rows={3} style={{ ...SI, resize:'vertical' }} />
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
-                          : <div style={{ fontSize:14, color:val?'#1A1A2E':'#ccc', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val||'—'}</div>
+                          : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
                         }
                       </div>
                     )
                   })}
                 </div>
-              )}
+               )}
 
               {empTab==='exams' && (
                 <div>

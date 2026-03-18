@@ -51,7 +51,7 @@ function LoginScreen({ onLogin }) {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .ilike('name', name.trim())
+        .ilike('name', name.trim() + '%')
         .single();
       if (error || !data) {
         setError('Исм ёки туғилган сана нотўғри. Қайта уриниб кўринг.');

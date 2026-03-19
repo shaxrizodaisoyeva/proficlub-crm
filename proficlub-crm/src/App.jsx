@@ -3,6 +3,7 @@ import {
   fetchEmployees, createEmployee, updateEmployee, deleteEmployee,
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
 } from './lib/db'
+import { supabase } from './lib/supabase'
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
@@ -148,7 +149,7 @@ function DonutChart({ passed, failed }) {
   )
 }
 
-function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee }) {
+function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
 
@@ -185,6 +186,10 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           </div>
           <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
             <button onClick={()=>onBulkEntry(training)} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), boxShadow:'0 2px 8px rgba(21,101,192,0.25)' }}>⚡ Натижа киритиш</button>
+            <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6 }}>
+              📎 Материал юклаш
+              <input type="file" accept=".pdf,.pptx,.docx,.xlsx" style={{ display:'none' }} onChange={e=>onUploadMaterial(training, e.target.files[0])} />
+            </label>
             <button onClick={()=>onDeleteTraining(training.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
           </div>
         </div>
@@ -539,6 +544,38 @@ export default function App() {
     finally { setSaving(false) }
   }
 
+  async function handleUploadMaterial(training, file) {
+  if (!file) return
+  setSaving(true)
+  try {
+    const ext = file.name.split('.').pop()
+    const path = `${training.id}/${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('training-materials')
+      .upload(path, file)
+    if (uploadError) throw uploadError
+    const { data: { publicUrl } } = supabase.storage
+      .from('training-materials')
+      .getPublicUrl(path)
+    const updatedMaterials = [
+      ...(training.materials || []),
+      { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
+    ]
+    const { error: updateError } = await supabase
+      .from('trainings')
+      .update({ materials: updatedMaterials })
+      .eq('id', training.id)
+    if (updateError) throw updateError
+    setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
+    setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
+    showToast(`${file.name} юкланди`)
+  } catch(e) {
+    showToast('Хатолик: ' + e.message, 'error')
+  } finally {
+    setSaving(false)
+  }
+}
+
   function handleBulkSaved() {
     setBulkMode(false)
     load() // reload all employees to get fresh exam results
@@ -775,6 +812,7 @@ export default function App() {
                   onBulkEntry={t=>{ setSelTraining(t); setBulkMode(true) }}
                   onDeleteTraining={handleDeleteTraining}
                   onViewEmployee={goToEmployee}
+                  onUploadMaterial={handleUploadMaterial}
                 />
               : !addingTr && (
                 <div>

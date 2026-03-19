@@ -26,7 +26,7 @@ const ROLE_FIELDS = {
     { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
     { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
     { key:'planPercent',   label:'Савдо режаси (%)',                   type:'number' },
-    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'text' },
+    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'textarea' },
     { key:'teamSize',      label:'Жамоасидаги ходимлар сони',          type:'number' },
     { key:'staffTurnover', label:'Ходимлар алмашуви',                  type:'text' },
   ],

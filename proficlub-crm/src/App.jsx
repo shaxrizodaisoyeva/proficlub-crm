@@ -4,7 +4,7 @@ import {
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
 } from './lib/db'
-import { supabase } from './lib/supabase'
+import { supabase } from './lib/supabase' 
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']

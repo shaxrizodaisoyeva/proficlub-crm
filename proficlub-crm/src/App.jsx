@@ -723,6 +723,7 @@ export default function App() {
       setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
       setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
       showToast(`${file.name} юкланди`)
+      await load()
     } catch(e) {
       showToast('Хатолик: ' + e.message, 'error')
     } finally {

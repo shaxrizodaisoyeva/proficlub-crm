@@ -105,3 +105,45 @@ export async function saveBulkExamResults(training, updates) {
   })
   await Promise.all(promises)
 }
+
+// ── SESSIONS ────────────────────────────────────────────────────────────────
+export async function fetchSessions(trainingId) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*, session_participants(*, employees(id, name, role))')
+    .eq('training_id', trainingId)
+    .order('date')
+  if (error) throw error
+  return data
+}
+
+export async function createSession(trainingId, { city, date, trainer }) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert({ training_id: trainingId, city, date, trainer })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSession(id) {
+  const { error } = await supabase.from('sessions').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function saveSessionParticipants(sessionId, participants) {
+  // Delete existing first
+  await supabase.from('session_participants').delete().eq('session_id', sessionId)
+  if (!participants.length) return
+  const { error } = await supabase
+    .from('session_participants')
+    .insert(participants.map(p => ({
+      session_id: sessionId,
+      employee_id: p.employeeId,
+      score: p.score ?? null,
+      passed: p.score != null ? p.score >= 70 : null,
+      open_answers: p.openAnswers ?? [],
+    })))
+  if (error) throw error
+}

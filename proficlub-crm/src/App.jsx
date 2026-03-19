@@ -244,6 +244,31 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
         </div>
       </div>
 
+      {/* Materials list */}
+      {(training.materials||[]).length > 0 && (
+        <div style={{ ...CARD, marginBottom:14 }}>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:10 }}>📎 Юкланган материаллар</div>
+          {(training.materials||[]).map((m,i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom: i < training.materials.length-1 ? '1px solid #F5F5F5' : 'none' }}>
+              <div style={{ width:36, height:36, borderRadius:8, background:'#F0F4FF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>
+                {m.name.endsWith('.pdf') ? '📄' : m.name.endsWith('.pptx') ? '📊' : '📁'}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:13 }}>{m.name}</div>
+                <div style={{ fontSize:11, color:'#888' }}>{m.size}</div>
+              </div>
+              <a href={m.url} target="_blank" rel="noreferrer" style={{ padding:'6px 12px', background:'#1976D2', color:'#fff', borderRadius:8, fontWeight:700, fontSize:12, textDecoration:'none' }}>⬇ Юклаш</a>
+              <button onClick={async ()=>{
+                const updatedMaterials = training.materials.filter((_,j)=>j!==i)
+                await supabase.from('trainings').update({ materials: updatedMaterials }).eq('id', training.id)
+                setTrainings(p=>p.map(t=>t.id===training.id?{...t,materials:updatedMaterials}:t))
+                setSelTraining(prev=>({...prev,materials:updatedMaterials}))
+              }} style={{ padding:'6px 10px', background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer' }}>🗑️</button>
+             </div>
+          ))}
+       </div>
+      )}
+
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
         {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар']].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:tab===t?'#1976D2':'#fff', color:tab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>

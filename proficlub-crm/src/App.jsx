@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   fetchEmployees, createEmployee, updateEmployee, deleteEmployee,
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
+  fetchSessions, createSession, deleteSession, saveSessionParticipants,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -152,6 +153,54 @@ function DonutChart({ passed, failed }) {
 function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
+  const [sessions, setSessions] = useState([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
+  const [cityFilter, setCityFilter] = useState('all')
+  const [addingSession, setAddingSession] = useState(false)
+  const [newSession, setNewSession] = useState({ city:'', date:'', trainer:'', selectedEmps:[] })
+  const [empSearch, setEmpSearch] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      setLoadingSessions(true)
+      try {
+        const data = await fetchSessions(training.id)
+        setSessions(data)
+      } catch(e) {
+        console.error(e)
+      } finally {
+        setLoadingSessions(false)
+      }
+    }
+    load()
+  }, [training.id])
+
+  async function handleDeleteSession(id) {
+    try {
+      await deleteSession(id)
+      setSessions(p => p.filter(s => s.id !== id))
+    } catch(e) {
+      console.error(e)
+    }
+  }
+
+  async function handleSaveSession() {
+    try {
+      const created = await createSession(training.id, {
+        city: newSession.city,
+        date: newSession.date,
+        trainer: newSession.trainer,
+      })
+      await saveSessionParticipants(created.id, newSession.selectedEmps.map(id => ({ employeeId: id })))
+      const updated = await fetchSessions(training.id)
+      setSessions(updated)
+      setAddingSession(false)
+      setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] })
+      setEmpSearch('')
+    } catch(e) {
+      console.error(e)
+    }
+  }
 
   const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
   const withResult = results.filter(x=>x.res)
@@ -196,7 +245,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       </div>
 
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
-        {[['overview','📊 Умумий'],['results','📋 Натижалар'],['answers','📝 Жавоблар']].map(([t,l])=>(
+        {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар']].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:tab===t?'#1976D2':'#fff', color:tab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
         ))}
       </div>
@@ -241,12 +290,12 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 ))}
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10, marginTop:14 }}>
               {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
                 { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
               ].map(({ label, arr, border, titleColor, medals, medalText='#fff' }) => (
-               arr.length === 0 && label.includes('Эътибор') ? null :
-               <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>
+                arr.length === 0 && label.includes('Эътибор') ? null :
+                <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>
                   <div style={{ fontWeight:800, fontSize:14, marginBottom:12, color:titleColor }}>{label}</div>
                   {arr.map((x,i)=>(
                     <div key={x.emp.id} onClick={()=>onViewEmployee(x.emp.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #F5F5F5', cursor:'pointer' }}>
@@ -260,6 +309,86 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               ))}
             </div>
           </>
+      )}
+
+      {tab==='sessions' && (
+        <div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              <button onClick={()=>setCityFilter('all')} style={{ padding:'5px 12px', borderRadius:20, border:'1.5px solid', borderColor:cityFilter==='all'?'#1976D2':'#E0E0E0', background:cityFilter==='all'?'#1976D2':'#fff', color:cityFilter==='all'?'#fff':'#555', fontSize:11, fontWeight:700, cursor:'pointer' }}>Барчаси</button>
+              {sessions.map(s=>(
+                <button key={s.id} onClick={()=>setCityFilter(s.id)} style={{ padding:'5px 12px', borderRadius:20, border:'1.5px solid', borderColor:cityFilter===s.id?'#1976D2':'#E0E0E0', background:cityFilter===s.id?'#1976D2':'#fff', color:cityFilter===s.id?'#fff':'#555', fontSize:11, fontWeight:700, cursor:'pointer' }}>{s.city}</button>
+              ))}
+            </div>
+            <button onClick={()=>setAddingSession(true)} style={{ ...BTN('#1976D2'), fontSize:12 }}>+ Шаҳар қўшиш</button>
+          </div>
+
+          {loadingSessions ? <Spinner /> : sessions.length === 0 ? (
+            <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>🏙️</div>
+              <div style={{ marginBottom:12 }}>Ҳали сессия йўқ</div>
+              <button onClick={()=>setAddingSession(true)} style={BTN('#1976D2')}>+ Шаҳар қўшиш</button>
+            </div>
+          ) : sessions.filter(s=>cityFilter==='all'||s.id===cityFilter).map(s=>(
+            <div key={s.id} style={{ ...CARD, borderLeft:'4px solid #1976D2' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:15 }}>🏙️ {s.city}</div>
+                  <div style={{ fontSize:12, color:'#888', marginTop:2 }}>{s.date}</div>
+                  {s.trainer && <div style={{ fontSize:12, color:'#1565C0', marginTop:2 }}>👤 Тренер: <b>{s.trainer}</b></div>}
+                </div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{s.session_participants?.length || 0} иштирокчи</span>
+                  <button onClick={()=>handleDeleteSession(s.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'4px 8px' }}>🗑️</button>
+                </div>
+              </div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {(s.session_participants||[]).map(p=>(
+                  <div key={p.id} onClick={()=>onViewEmployee(p.employee_id)} style={{ display:'flex', alignItems:'center', gap:6, background:'#F5F7FA', borderRadius:8, padding:'5px 10px', cursor:'pointer' }}>
+                    <Avatar name={p.employees?.name||'?'} size={22} />
+                    <span style={{ fontSize:12, fontWeight:600 }}>{p.employees?.name}</span>
+                    {p.score!=null && <span style={{ fontSize:11, fontWeight:800, color:scoreColor(p.score) }}>{p.score}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {addingSession && (
+            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+              <div style={{ background:'#fff', borderRadius:16, padding:24, width:'100%', maxWidth:560, maxHeight:'80vh', overflowY:'auto' }}>
+                <h3 style={{ margin:'0 0 16px', fontSize:17 }}>Янги сессия қўшиш</h3>
+                <label style={LBL}>Шаҳар</label>
+                <input value={newSession.city} onChange={e=>setNewSession(p=>({...p,city:e.target.value}))} placeholder="Тошкент" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Сана</label>
+                <input type="text" value={newSession.date} onChange={e=>setNewSession(p=>({...p,date:e.target.value}))} placeholder="2025-03-18" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Тренер</label>
+                <input value={newSession.trainer} onChange={e=>setNewSession(p=>({...p,trainer:e.target.value}))} placeholder="Тренер исми" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Иштирокчилар ({newSession.selectedEmps.length} танланди)</label>
+                <input value={empSearch} onChange={e=>setEmpSearch(e.target.value)} placeholder="🔍 Қидириш..." style={{ ...SI, marginBottom:8 }} />
+                <div style={{ maxHeight:200, overflowY:'auto', border:'1.5px solid #E0E0E0', borderRadius:8, marginBottom:14 }}>
+                  {employees.filter(e=>e.name.toLowerCase().includes(empSearch.toLowerCase())).map(e=>{
+                    const checked = newSession.selectedEmps.includes(e.id)
+                    return (
+                      <div key={e.id} onClick={()=>setNewSession(p=>({ ...p, selectedEmps: checked ? p.selectedEmps.filter(id=>id!==e.id) : [...p.selectedEmps, e.id] }))} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', cursor:'pointer', background:checked?'#EEF4FF':'transparent', borderBottom:'1px solid #F5F5F5' }}>
+                        <div style={{ width:16, height:16, borderRadius:4, border:'2px solid', borderColor:checked?'#1976D2':'#ccc', background:checked?'#1976D2':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          {checked && <span style={{ color:'#fff', fontSize:10 }}>✓</span>}
+                        </div>
+                        <Avatar name={e.name} size={24} />
+                        <span style={{ fontSize:13, fontWeight:600, flex:1 }}>{e.name}</span>
+                        <Badge role={e.role} />
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={handleSaveSession} disabled={!newSession.city||!newSession.date} style={{ ...BTN('#1976D2'), flex:1, opacity:newSession.city&&newSession.date?1:0.4 }}>Сақлаш</button>
+                  <button onClick={()=>{ setAddingSession(false); setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] }); setEmpSearch('') }} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {tab==='results' && (
@@ -545,40 +674,40 @@ export default function App() {
   }
 
   async function handleUploadMaterial(training, file) {
-  if (!file) return
-  setSaving(true)
-  try {
-    const ext = file.name.split('.').pop()
-    const path = `${training.id}/${Date.now()}.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('training-materials')
-      .upload(path, file)
-    if (uploadError) throw uploadError
-    const { data: { publicUrl } } = supabase.storage
-      .from('training-materials')
-      .getPublicUrl(path)
-    const updatedMaterials = [
-      ...(training.materials || []),
-      { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
-    ]
-    const { error: updateError } = await supabase
-      .from('trainings')
-      .update({ materials: updatedMaterials })
-      .eq('id', training.id)
-    if (updateError) throw updateError
-    setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
-    setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
-    showToast(`${file.name} юкланди`)
-  } catch(e) {
-    showToast('Хатолик: ' + e.message, 'error')
-  } finally {
-    setSaving(false)
+    if (!file) return
+    setSaving(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${training.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('training-materials')
+        .upload(path, file)
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage
+        .from('training-materials')
+        .getPublicUrl(path)
+      const updatedMaterials = [
+        ...(training.materials || []),
+        { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
+      ]
+      const { error: updateError } = await supabase
+        .from('trainings')
+        .update({ materials: updatedMaterials })
+        .eq('id', training.id)
+      if (updateError) throw updateError
+      setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
+      setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
+      showToast(`${file.name} юкланди`)
+    } catch(e) {
+      showToast('Хатолик: ' + e.message, 'error')
+    } finally {
+      setSaving(false)
+    }
   }
-}
 
   function handleBulkSaved() {
     setBulkMode(false)
-    load() // reload all employees to get fresh exam results
+    load()
   }
 
   function goToEmployee(id) {
@@ -653,7 +782,6 @@ export default function App() {
       {/* ── MAIN CONTENT ── */}
       <div style={{ flex:1, overflowY:'auto', padding:22 }}>
 
-        {/* Add Employee */}
         {adding && (
           <div style={{ maxWidth:440, ...CARD }}>
             <h2 style={{ margin:'0 0 16px', fontSize:17 }}>Янги ходим қўшиш</h2>
@@ -670,7 +798,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Employee Detail */}
         {page==='employees' && selEmp && !adding && (()=>{
           const fields = ROLE_FIELDS[selEmp.role] || []
           return (
@@ -678,7 +805,7 @@ export default function App() {
               <div style={{ ...CARD, display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                 <Avatar name={selEmp.name} size={50} />
                 <div style={{ flex:1 }}>
-                  {editing 
+                  {editing
                     ? <input value={editData.name||''} onChange={e=>setEditData(p=>({...p,name:e.target.value}))} style={{ ...SI, fontSize:17, fontWeight:800, maxWidth:300 }} />
                     : <div style={{ fontSize:19, fontWeight:800 }}>{selEmp.name}</div>
                   }
@@ -728,7 +855,7 @@ export default function App() {
                     )
                   })}
                 </div>
-               )}
+              )}
 
               {empTab==='exams' && (
                 <div>
@@ -771,7 +898,6 @@ export default function App() {
           )
         })()}
 
-        {/* Empty state */}
         {page==='employees' && !selEmp && !adding && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80%', color:'#ccc' }}>
             <div style={{ fontSize:48, marginBottom:10 }}>👈</div>
@@ -780,7 +906,6 @@ export default function App() {
           </div>
         )}
 
-        {/* EXAMS PAGE */}
         {page==='exams' && !bulkMode && (
           <div>
             {addingTr && (
@@ -843,7 +968,6 @@ export default function App() {
           </div>
         )}
 
-        {/* BULK ENTRY */}
         {page==='exams' && bulkMode && selTraining && (
           <BulkEntry
             training={selTraining}

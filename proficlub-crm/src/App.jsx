@@ -891,7 +891,7 @@ export default function App() {
                           : f.key === 'promoList'
                             ? <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:2 }}>
                               {val.split('\n').map((d,i) => (
-                                <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:600 }}>{d}</span>
+                                <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:13, fontWeight:600 }}>{d}</span>
                               ))}
                              </div>
                             : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>

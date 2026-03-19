@@ -888,7 +888,13 @@ export default function App() {
                           ? f.type==='textarea'
                             ? <textarea value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} rows={3} style={{ ...SI, resize:'vertical' }} />
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
-                          : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
+                          : f.key === 'promoList'
+                            ? <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:2 }}>
+                              {val.split('\n').map((d,i) => (
+                                <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:600 }}>{d}</span>
+                              ))}
+                             </div>
+                            : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
                         }
                       </div>
                     )

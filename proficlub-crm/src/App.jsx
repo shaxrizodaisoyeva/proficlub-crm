@@ -957,7 +957,7 @@ export default function App() {
 
             {selTraining
               ? <TrainingDashboard
-                  training={selTraining}
+                  training={trainings.find(t=>t.id===selTraining?.id)||selTraining}
                   employees={employees}
                   onBulkEntry={t=>{ setSelTraining(t); setBulkMode(true) }}
                   onDeleteTraining={handleDeleteTraining}

@@ -51,12 +51,12 @@ export async function fetchTrainings() {
     .order('date', { ascending: false })
   if (error) throw error
   return data.map(row => ({
-    id: row.id,
-    title: row.title,
-    date: row.date,
-    questions: row.questions ?? [],
-  }))
-}
+  id: row.id,
+  title: row.title,
+  date: row.date,
+  questions: row.questions ?? [],
+  materials: row.materials ?? [],
+}))
 
 export async function createTraining(tr) {
   const id = 't' + Date.now()

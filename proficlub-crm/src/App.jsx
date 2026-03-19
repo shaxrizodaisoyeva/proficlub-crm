@@ -26,7 +26,7 @@ const ROLE_FIELDS = {
     { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
     { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
     { key:'planPercent',   label:'Савдо режаси (%)',                   type:'number' },
-    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'textarea' },
+    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'promo' },
     { key:'teamSize',      label:'Жамоасидаги ходимлар сони',          type:'number' },
     { key:'staffTurnover', label:'Ходимлар алмашуви',                  type:'text' },
   ],
@@ -882,10 +882,10 @@ export default function App() {
                     const val = editing ? editData[f.key] : selEmp[f.key]
                     if (!editing && !val) return null
                     return (
-                      <div key={f.key} style={{ ...CARD, gridColumn:f.type==='textarea'?'1/-1':'auto', marginBottom:0 }}>
+                      <div key={f.key} style={{ ...CARD, gridColumn:(f.type==='textarea'||f.type==='promo')?'1/-1':'auto', marginBottom:0 }}>
                         <label style={LBL}>{f.label}</label>
                         {editing
-                          ? f.type==='textarea'
+                          ? f.type==='textarea' || f.type==='promo'
                             ? <textarea value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} rows={3} style={{ ...SI, resize:'vertical' }} />
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
                           : f.key === 'promoList'

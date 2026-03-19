@@ -157,6 +157,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [cityFilter, setCityFilter] = useState('all')
   const [addingSession, setAddingSession] = useState(false)
+  const [editingSession, setEditingSession] = useState(null)
   const [newSession, setNewSession] = useState({ city:'', date:'', trainer:'', selectedEmps:[] })
   const [empSearch, setEmpSearch] = useState('')
 
@@ -185,22 +186,34 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   }
 
   async function handleSaveSession() {
-    try {
+  try {
+    let sessionId
+    if (editingSession) {
+      await supabase.from('sessions').update({
+        city: newSession.city,
+        date: newSession.date,
+        trainer: newSession.trainer,
+      }).eq('id', editingSession.id)
+      sessionId = editingSession.id
+    } else {
       const created = await createSession(training.id, {
         city: newSession.city,
         date: newSession.date,
         trainer: newSession.trainer,
       })
-      await saveSessionParticipants(created.id, newSession.selectedEmps.map(id => ({ employeeId: id })))
-      const updated = await fetchSessions(training.id)
-      setSessions(updated)
-      setAddingSession(false)
-      setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] })
-      setEmpSearch('')
-    } catch(e) {
-      console.error(e)
+      sessionId = created.id
     }
+    await saveSessionParticipants(sessionId, newSession.selectedEmps.map(id => ({ employeeId: id })))
+    const updated = await fetchSessions(training.id)
+    setSessions(updated)
+    setAddingSession(false)
+    setEditingSession(null)
+    setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] })
+    setEmpSearch('')
+  } catch(e) {
+    console.error(e)
   }
+}
 
   const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
   const withResult = results.filter(x=>x.res)
@@ -364,8 +377,9 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{s.session_participants?.length || 0} иштирокчи</span>
+                  <button onClick={()=>{ setEditingSession(s); setNewSession({ city:s.city, date:s.date, trainer:s.trainer||'', selectedEmps:(s.session_participants||[]).map(p=>p.employee_id) }); setAddingSession(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'4px 8px' }}>✏️</button>
                   <button onClick={()=>handleDeleteSession(s.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'4px 8px' }}>🗑️</button>
-                </div>
+               </div>
               </div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {(s.session_participants||[]).map(p=>(
@@ -382,7 +396,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           {addingSession && (
             <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
               <div style={{ background:'#fff', borderRadius:16, padding:24, width:'100%', maxWidth:560, maxHeight:'80vh', overflowY:'auto' }}>
-                <h3 style={{ margin:'0 0 16px', fontSize:17 }}>Янги сессия қўшиш</h3>
+                <h3 style={{ margin:'0 0 16px', fontSize:17 }}>{editingSession ? 'Сессияни таҳрирлаш' : 'Янги сессия қўшиш'}</h3>
                 <label style={LBL}>Шаҳар</label>
                 <input value={newSession.city} onChange={e=>setNewSession(p=>({...p,city:e.target.value}))} placeholder="Тошкент" style={{ ...SI, marginBottom:10 }} />
                 <label style={LBL}>Сана</label>
@@ -408,7 +422,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 </div>
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={handleSaveSession} disabled={!newSession.city||!newSession.date} style={{ ...BTN('#1976D2'), flex:1, opacity:newSession.city&&newSession.date?1:0.4 }}>Сақлаш</button>
-                  <button onClick={()=>{ setAddingSession(false); setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] }); setEmpSearch('') }} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                  <button onClick={()=>{ setAddingSession(false); setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] }); setEmpSearch(''); setEditingSession(null) }} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
                 </div>
               </div>
             </div>

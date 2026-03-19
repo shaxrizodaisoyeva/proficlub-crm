@@ -4,9 +4,8 @@ import {
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
 } from './lib/db'
-import { supabase } from './lib/supabase' 
+import { supabase } from './lib/supabase'
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
@@ -18,69 +17,67 @@ const ROLE_COLORS = {
 }
 const ROLE_FIELDS = {
   'Менежер': [
-    { key:'birthDate',     label:'Туғилган санаси',                    type:'date' },
-    { key:'educationLevel',label:'Маълумоти',                          type:'text' },
-    { key:'education',     label:'Таълим муассасаси',                  type:'text' },
-    { key:'specialty',     label:'Дипломдаги мутахассислик',           type:'text' },
-    { key:'courses',       label:'Курслар / малака ошириш',            type:'text' },
-    { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
-    { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
-    { key:'planPercent',   label:'Савдо режаси (%)',                   type:'number' },
-    { key:'promoList',     label:'Промоция дорилар рўйхати',           type:'promo' },
-    { key:'teamSize',      label:'Жамоасидаги ходимлар сони',          type:'number' },
-    { key:'staffTurnover', label:'Ходимлар алмашуви',                  type:'text' },
+    { key:'birthDate',     label:'Туғилган санаси',               type:'date' },
+    { key:'educationLevel',label:'Маълумоти',                     type:'text' },
+    { key:'education',     label:'Таълим муассасаси',             type:'text' },
+    { key:'specialty',     label:'Дипломдаги мутахассислик',      type:'text' },
+    { key:'courses',       label:'Курслар / малака ошириш',       type:'text' },
+    { key:'hireDate',      label:'Иш бошлаган сана',              type:'date' },
+    { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',       type:'text' },
+    { key:'planPercent',   label:'Савдо режаси (%)',              type:'text' },
+    { key:'promoList',     label:'Промоция дорилар рўйхати',      type:'promo' },
+    { key:'teamSize',      label:'Жамоасидаги ходимлар сони',     type:'text' },
+    { key:'staffTurnover', label:'Ходимлар алмашуви',             type:'text' },
   ],
   'МП': [
-    { key:'birthDate',     label:'Туғилган санаси',                    type:'date' },
-    { key:'educationLevel',label:'Маълумоти',                          type:'text' },
-    { key:'education',     label:'Таълим муассасаси',                  type:'text' },
-    { key:'specialty',     label:'Дипломдаги мутахассислик',           type:'text' },
-    { key:'courses',       label:'Курслар / малака ошириш',            type:'text' },
-    { key:'hireDate',      label:'Иш бошлаган сана',                   type:'date' },
-    { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',            type:'text' },
+    { key:'birthDate',     label:'Туғилган санаси',               type:'date' },
+    { key:'educationLevel',label:'Маълумоти',                     type:'text' },
+    { key:'education',     label:'Таълим муассасаси',             type:'text' },
+    { key:'specialty',     label:'Дипломдаги мутахассислик',      type:'text' },
+    { key:'courses',       label:'Курслар / малака ошириш',       type:'text' },
+    { key:'hireDate',      label:'Иш бошлаган сана',              type:'date' },
+    { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',       type:'text' },
   ],
   'Оператор': [
-    { key:'birthDate',        label:'Туғилган санаси',                 type:'date' },
-    { key:'education',        label:'Таълим муассасаси',               type:'text' },
-    { key:'specialty',        label:'Дипломдаги мутахассислик',        type:'text' },
-    { key:'courses',          label:'Курслар / малака ошириш',         type:'textarea' },
-    { key:'hireDate',         label:'Иш бошлаган сана',                type:'date' },
-    { key:'currentPosition',  label:'Ҳозирги лавозими',               type:'text' },
-    { key:'shift',            label:'Иш смена',                        type:'text' },
+    { key:'birthDate',       label:'Туғилган санаси',             type:'date' },
+    { key:'education',       label:'Таълим муассасаси',           type:'text' },
+    { key:'specialty',       label:'Дипломдаги мутахассислик',    type:'text' },
+    { key:'courses',         label:'Курслар / малака ошириш',     type:'textarea' },
+    { key:'hireDate',        label:'Иш бошлаган сана',            type:'date' },
+    { key:'currentPosition', label:'Ҳозирги лавозими',           type:'text' },
+    { key:'shift',           label:'Иш смена',                    type:'text' },
   ],
   'Ҳайдовчи': [
-    { key:'birthDate',        label:'Туғилган санаси',                 type:'date' },
-    { key:'education',        label:'Таълим муассасаси',               type:'text' },
-    { key:'hireDate',         label:'Иш бошлаган сана',                type:'date' },
-    { key:'licenseCategory',  label:'Ҳайдовчилик гувоҳномаси',        type:'text' },
-    { key:'vehicleType',      label:'Транспорт тури',                  type:'text' },
-    { key:'region',           label:'Хизмат кўрсатувчи ҳудуд',        type:'text' },
+    { key:'birthDate',       label:'Туғилган санаси',             type:'date' },
+    { key:'education',       label:'Таълим муассасаси',           type:'text' },
+    { key:'hireDate',        label:'Иш бошлаган сана',            type:'date' },
+    { key:'licenseCategory', label:'Ҳайдовчилик гувоҳномаси',    type:'text' },
+    { key:'vehicleType',     label:'Транспорт тури',              type:'text' },
+    { key:'region',          label:'Хизмат кўрсатувчи ҳудуд',    type:'text' },
   ],
   'Таҳлилчи': [
-    { key:'birthDate',    label:'Туғилган санаси',                     type:'date' },
-    { key:'education',    label:'Таълим муассасаси',                   type:'text' },
-    { key:'specialty',    label:'Дипломдаги мутахассислик',            type:'text' },
-    { key:'courses',      label:'Курслар / малака ошириш',             type:'textarea' },
-    { key:'hireDate',     label:'Иш бошлаган сана',                    type:'date' },
-    { key:'software',     label:'Ишлатадиган дастурлар',               type:'text' },
-    { key:'reportType',   label:'Тайёрлайдиган ҳисоботлар',           type:'textarea' },
+    { key:'birthDate',   label:'Туғилган санаси',                 type:'date' },
+    { key:'education',   label:'Таълим муассасаси',               type:'text' },
+    { key:'specialty',   label:'Дипломдаги мутахассислик',        type:'text' },
+    { key:'courses',     label:'Курслар / малака ошириш',         type:'textarea' },
+    { key:'hireDate',    label:'Иш бошлаган сана',                type:'date' },
+    { key:'software',    label:'Ишлатадиган дастурлар',           type:'text' },
+    { key:'reportType',  label:'Тайёрлайдиган ҳисоботлар',       type:'textarea' },
   ],
   'Администратор': [
-    { key:'birthDate',        label:'Туғилган санаси',                 type:'date' },
-    { key:'education',        label:'Таълим муассасаси',               type:'text' },
-    { key:'specialty',        label:'Дипломдаги мутахассислик',        type:'text' },
-    { key:'courses',          label:'Курслар / малака ошириш',         type:'textarea' },
-    { key:'hireDate',         label:'Иш бошлаган сана',                type:'date' },
-    { key:'initialPosition',  label:'Бошланғич лавозим',              type:'text' },
-    { key:'currentPosition',  label:'Ҳозирги лавозим',                type:'text' },
+    { key:'birthDate',       label:'Туғилган санаси',             type:'date' },
+    { key:'education',       label:'Таълим муассасаси',           type:'text' },
+    { key:'specialty',       label:'Дипломдаги мутахассислик',    type:'text' },
+    { key:'courses',         label:'Курслар / малака ошириш',     type:'textarea' },
+    { key:'hireDate',        label:'Иш бошлаган сана',            type:'date' },
+    { key:'initialPosition', label:'Бошланғич лавозим',          type:'text' },
+    { key:'currentPosition', label:'Ҳозирги лавозим',            type:'text' },
   ],
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
 const scoreColor = s => !s && s !== 0 ? '#aaa' : s >= 85 ? '#2E7D32' : s >= 70 ? '#F57C00' : '#C62828'
 const scoreBg    = s => !s && s !== 0 ? '#f0f0f0' : s >= 85 ? '#E8F5E9' : s >= 70 ? '#FFF8E1' : '#FFEBEE'
 
-// ── SMALL UI ──────────────────────────────────────────────────────────────────
 function Badge({ role }) {
   const c = ROLE_COLORS[role] || { bg:'#f0f0f0', text:'#555', dot:'#999' }
   return (
@@ -124,13 +121,11 @@ function Toast({ msg, type = 'success' }) {
   )
 }
 
-// ── STYLES ────────────────────────────────────────────────────────────────────
 const SI   = { width:'100%', padding:'8px 12px', border:'1.5px solid #E0E0E0', borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'#FAFAFA', boxSizing:'border-box' }
 const BTN  = (bg, color='#fff', extra={}) => ({ padding:'8px 16px', background:bg, color, border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13, ...extra })
 const CARD = { background:'#fff', borderRadius:14, padding:'18px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.06)', marginBottom:14 }
 const LBL  = { fontSize:11, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:0.5, marginBottom:5, display:'block' }
 
-// ── TRAINING DASHBOARD ────────────────────────────────────────────────────────
 function DonutChart({ passed, failed }) {
   const total = passed + failed
   if (!total) return <div style={{ width:80, height:80, borderRadius:'50%', background:'#F0F0F0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#aaa' }}>—</div>
@@ -150,7 +145,7 @@ function DonutChart({ passed, failed }) {
   )
 }
 
-function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial }) {
+function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial, onEditTraining }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
   const [sessions, setSessions] = useState([])
@@ -167,11 +162,8 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       try {
         const data = await fetchSessions(training.id)
         setSessions(data)
-      } catch(e) {
-        console.error(e)
-      } finally {
-        setLoadingSessions(false)
-      }
+      } catch(e) { console.error(e) }
+      finally { setLoadingSessions(false) }
     }
     load()
   }, [training.id])
@@ -180,40 +172,28 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
     try {
       await deleteSession(id)
       setSessions(p => p.filter(s => s.id !== id))
-    } catch(e) {
-      console.error(e)
-    }
+    } catch(e) { console.error(e) }
   }
 
   async function handleSaveSession() {
-  try {
-    let sessionId
-    if (editingSession) {
-      await supabase.from('sessions').update({
-        city: newSession.city,
-        date: newSession.date,
-        trainer: newSession.trainer,
-      }).eq('id', editingSession.id)
-      sessionId = editingSession.id
-    } else {
-      const created = await createSession(training.id, {
-        city: newSession.city,
-        date: newSession.date,
-        trainer: newSession.trainer,
-      })
-      sessionId = created.id
-    }
-    await saveSessionParticipants(sessionId, newSession.selectedEmps.map(id => ({ employeeId: id })))
-    const updated = await fetchSessions(training.id)
-    setSessions(updated)
-    setAddingSession(false)
-    setEditingSession(null)
-    setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] })
-    setEmpSearch('')
-  } catch(e) {
-    console.error(e)
+    try {
+      let sessionId
+      if (editingSession) {
+        await supabase.from('sessions').update({ city:newSession.city, date:newSession.date, trainer:newSession.trainer }).eq('id', editingSession.id)
+        sessionId = editingSession.id
+      } else {
+        const created = await createSession(training.id, { city:newSession.city, date:newSession.date, trainer:newSession.trainer })
+        sessionId = created.id
+      }
+      await saveSessionParticipants(sessionId, newSession.selectedEmps.map(id => ({ employeeId: id })))
+      const updated = await fetchSessions(training.id)
+      setSessions(updated)
+      setAddingSession(false)
+      setEditingSession(null)
+      setNewSession({ city:'', date:'', trainer:'', selectedEmps:[] })
+      setEmpSearch('')
+    } catch(e) { console.error(e) }
   }
-}
 
   const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
   const withResult = results.filter(x=>x.res)
@@ -248,6 +228,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           </div>
           <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
             <button onClick={()=>onBulkEntry(training)} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), boxShadow:'0 2px 8px rgba(21,101,192,0.25)' }}>⚡ Натижа киритиш</button>
+            <button onClick={()=>onEditTraining(training)} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB' }}>✏️ Таҳрирлаш</button>
             <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6 }}>
               📎 Материал юклаш
               <input type="file" accept=".pdf,.pptx,.docx,.xlsx" style={{ display:'none' }} onChange={e=>onUploadMaterial(training, e.target.files[0])} />
@@ -257,7 +238,6 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
         </div>
       </div>
 
-      {/* Materials list */}
       {(training.materials||[]).length > 0 && (
         <div style={{ ...CARD, marginBottom:14 }}>
           <div style={{ fontWeight:800, fontSize:14, marginBottom:10 }}>📎 Юкланган материаллар</div>
@@ -274,12 +254,10 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               <button onClick={async ()=>{
                 const updatedMaterials = training.materials.filter((_,j)=>j!==i)
                 await supabase.from('trainings').update({ materials: updatedMaterials }).eq('id', training.id)
-                setTrainings(p=>p.map(t=>t.id===training.id?{...t,materials:updatedMaterials}:t))
-                setSelTraining(prev=>({...prev,materials:updatedMaterials}))
               }} style={{ padding:'6px 10px', background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer' }}>🗑️</button>
-             </div>
+            </div>
           ))}
-       </div>
+        </div>
       )}
 
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
@@ -360,7 +338,6 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
             </div>
             <button onClick={()=>setAddingSession(true)} style={{ ...BTN('#1976D2'), fontSize:12 }}>+ Шаҳар қўшиш</button>
           </div>
-
           {loadingSessions ? <Spinner /> : sessions.length === 0 ? (
             <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
               <div style={{ fontSize:36, marginBottom:10 }}>🏙️</div>
@@ -379,7 +356,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                   <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{s.session_participants?.length || 0} иштирокчи</span>
                   <button onClick={()=>{ setEditingSession(s); setNewSession({ city:s.city, date:s.date, trainer:s.trainer||'', selectedEmps:(s.session_participants||[]).map(p=>p.employee_id) }); setAddingSession(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'4px 8px' }}>✏️</button>
                   <button onClick={()=>handleDeleteSession(s.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'4px 8px' }}>🗑️</button>
-               </div>
+                </div>
               </div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {(s.session_participants||[]).map(p=>(
@@ -392,7 +369,6 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               </div>
             </div>
           ))}
-
           {addingSession && (
             <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
               <div style={{ background:'#fff', borderRadius:16, padding:24, width:'100%', maxWidth:560, maxHeight:'80vh', overflowY:'auto' }}>
@@ -490,11 +466,10 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   )
 }
 
-// ── BULK ENTRY ────────────────────────────────────────────────────────────────
 function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
-  const [scores, setScores]   = useState({})
-  const [search, setSearch]   = useState('')
-  const [saving, setSaving]   = useState(false)
+  const [scores, setScores] = useState({})
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(()=>{
     const init = {}
@@ -513,19 +488,12 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
     try {
       const updates = Object.entries(scores)
         .filter(([,s])=>s?.mcScore!==''&&s?.mcScore!=null)
-        .map(([empId,s])=>({
-          empId: Number(empId),
-          score: Number(s.mcScore),
-          openAnswers: (training.questions||[]).map(q=>({ q, a:s.openAnswers?.[q]||'' })),
-        }))
+        .map(([empId,s])=>({ empId:Number(empId), score:Number(s.mcScore), openAnswers:(training.questions||[]).map(q=>({ q, a:s.openAnswers?.[q]||'' })) }))
       await saveBulkExamResults(training, updates)
       onToast(`${updates.length} та натижа сақланди`)
       onSave()
-    } catch(e) {
-      onToast('Хатолик: ' + e.message, 'error')
-    } finally {
-      setSaving(false)
-    }
+    } catch(e) { onToast('Хатолик: ' + e.message, 'error') }
+    finally { setSaving(false) }
   }
 
   return (
@@ -537,7 +505,7 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
           <div style={{ fontSize:12, color:'#888' }}>{training.date} · <span style={{ color:'#1976D2', fontWeight:700 }}>{filledCount} та киритилди</span></div>
         </div>
         <div style={{ display:'flex', gap:7 }}>
-          <button onClick={handleSave} disabled={saving||filledCount===0} style={{ ...BTN('#388E3C'), opacity:filledCount>0?1:0.5, boxShadow:'0 2px 8px rgba(56,142,60,0.25)' }}>{saving ? 'Сақланяпти...' : `✅ ${filledCount} та сақлаш`}</button>
+          <button onClick={handleSave} disabled={saving||filledCount===0} style={{ ...BTN('#388E3C'), opacity:filledCount>0?1:0.5 }}>{saving ? 'Сақланяпти...' : `✅ ${filledCount} та сақлаш`}</button>
           <button onClick={onCancel} style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>← Орқага</button>
         </div>
       </div>
@@ -562,7 +530,7 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
             {filtered.map((emp,idx)=>{
               const sc = scores[emp.id] || {}
               const has = sc.mcScore !== '' && sc.mcScore != null
-              const sn  = Number(sc.mcScore)
+              const sn = Number(sc.mcScore)
               return (
                 <tr key={emp.id} style={{ borderTop:'1px solid #F0F0F0', background:has?(sn>=70?'rgba(76,175,80,0.04)':'rgba(239,83,80,0.04)'):'transparent' }}>
                   <td style={{ padding:'7px 14px' }}>
@@ -574,18 +542,14 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
                   </td>
                   <td style={{ padding:'7px 14px' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      <input type="number" min="0" max="100"
-                        value={sc.mcScore??''}
-                        onChange={e=>setScores(p=>({...p,[emp.id]:{...p[emp.id],mcScore:e.target.value}}))}
-                        placeholder="—"
+                      <input type="number" min="0" max="100" value={sc.mcScore??''} onChange={e=>setScores(p=>({...p,[emp.id]:{...p[emp.id],mcScore:e.target.value}}))} placeholder="—"
                         style={{ width:64, padding:'6px 8px', border:'1.5px solid', borderColor:has?(sn>=70?'#A5D6A7':'#EF9A9A'):'#E0E0E0', borderRadius:7, fontSize:14, fontWeight:800, textAlign:'center', outline:'none', background:'#fff', color:has?scoreColor(sn):'#333' }} />
                       {has && <span style={{ fontSize:11, fontWeight:700, color:sn>=70?'#388E3C':'#C62828' }}>{sn>=70?'✓':'✗'}</span>}
                     </div>
                   </td>
                   {(training.questions||[]).map((q,i)=>(
                     <td key={i} style={{ padding:'7px 10px' }}>
-                      <textarea rows={2} value={sc.openAnswers?.[q]||''}
-                        onChange={e=>setScores(p=>({...p,[emp.id]:{...p[emp.id],openAnswers:{...(p[emp.id]?.openAnswers||{}),[q]:e.target.value}}}))}
+                      <textarea rows={2} value={sc.openAnswers?.[q]||''} onChange={e=>setScores(p=>({...p,[emp.id]:{...p[emp.id],openAnswers:{...(p[emp.id]?.openAnswers||{}),[q]:e.target.value}}}))}
                         placeholder="Жавоб..." style={{ width:150, padding:'5px 8px', border:'1.5px solid #E0E0E0', borderRadius:7, fontSize:12, fontFamily:'inherit', resize:'none', outline:'none', background:'#FAFAFA' }} />
                     </td>
                   ))}
@@ -602,13 +566,11 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
   )
 }
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [employees, setEmployees] = useState([])
   const [trainings, setTrainings] = useState([])
   const [loading, setLoading]     = useState(true)
   const [toast, setToast]         = useState(null)
-
   const [page, setPage]           = useState('employees')
   const [selected, setSelected]   = useState(null)
   const [empTab, setEmpTab]       = useState('info')
@@ -620,10 +582,10 @@ export default function App() {
   const [filterRole, setFilterRole] = useState('Барчаси')
   const [delConfirm, setDelConfirm] = useState(null)
   const [saving, setSaving]       = useState(false)
-
   const [selTraining, setSelTraining] = useState(null)
   const [bulkMode, setBulkMode]   = useState(false)
   const [addingTr, setAddingTr]   = useState(false)
+  const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
 
   const showToast = useCallback((msg, type='success') => {
@@ -637,11 +599,8 @@ export default function App() {
       const [emps, trs] = await Promise.all([fetchEmployees(), fetchTrainings()])
       setEmployees(emps)
       setTrainings(trs)
-    } catch(e) {
-      showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error')
-    } finally {
-      setLoading(false)
-    }
+    } catch(e) { showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error') }
+    finally { setLoading(false) }
   }, [showToast])
 
   useEffect(()=>{ load() }, [load])
@@ -692,11 +651,25 @@ export default function App() {
     if (!newTr.title.trim()) return
     setSaving(true)
     try {
-      const created = await createTraining({ ...newTr, questions:newTr.questions.filter(q=>q.trim()) })
-      setTrainings(p=>[created,...p])
-      setAddingTr(false); setNewTr({ title:'', date:'', questions:[''] })
-      setSelTraining(created)
-      showToast(`"${created.title}" тренинги яратилди`)
+      if (editingTraining) {
+        const questions = newTr.questions.filter(q=>q.trim())
+        const { error } = await supabase
+          .from('trainings')
+          .update({ title: newTr.title, date: newTr.date, questions })
+          .eq('id', editingTraining.id)
+        if (error) throw error
+        setTrainings(p => p.map(t => t.id === editingTraining.id ? { ...t, title:newTr.title, date:newTr.date, questions } : t))
+        setSelTraining(prev => ({ ...prev, title:newTr.title, date:newTr.date, questions }))
+        showToast(`"${newTr.title}" янгиланди`)
+        setEditingTraining(null)
+      } else {
+        const created = await createTraining({ ...newTr, questions:newTr.questions.filter(q=>q.trim()) })
+        setTrainings(p=>[created,...p])
+        setSelTraining(created)
+        showToast(`"${created.title}" тренинги яратилди`)
+      }
+      setAddingTr(false)
+      setNewTr({ title:'', date:'', questions:[''] })
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
@@ -713,52 +686,30 @@ export default function App() {
   }
 
   async function handleUploadMaterial(training, file) {
-  if (!file) return
-  setSaving(true)
-  try {
-    const ext = file.name.split('.').pop()
-    const path = `${training.id}/${Date.now()}.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('training-materials')
-      .upload(path, file)
-    if (uploadError) throw uploadError
-    const { data: { publicUrl } } = supabase.storage
-      .from('training-materials')
-      .getPublicUrl(path)
-    const updatedMaterials = [
-      ...(training.materials || []),
-      { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
-    ]
-    const { error: updateError } = await supabase
-      .from('trainings')
-      .update({ materials: updatedMaterials })
-      .eq('id', training.id)
-    if (updateError) throw updateError
-    setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
-    setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
-    showToast(`${file.name} юкланди`)
-  } catch(e) {
-    showToast('Хатолик: ' + e.message, 'error')
-  } finally {
-    setSaving(false)
-  }
-}
-
-  function handleBulkSaved() {
-    setBulkMode(false)
-    load()
+    if (!file) return
+    setSaving(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${training.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('training-materials').upload(path, file)
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
+      const updatedMaterials = [...(training.materials || []), { name:file.name, size:`${(file.size/1024/1024).toFixed(1)} МБ`, url:publicUrl }]
+      const { error: updateError } = await supabase.from('trainings').update({ materials:updatedMaterials }).eq('id', training.id)
+      if (updateError) throw updateError
+      setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials:updatedMaterials } : t))
+      setSelTraining(prev => ({ ...prev, materials:updatedMaterials }))
+      showToast(`${file.name} юкланди`)
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    finally { setSaving(false) }
   }
 
-  function goToEmployee(id) {
-    setSelected(id); setEmpTab('exams'); setPage('employees'); setBulkMode(false)
-  }
-
+  function handleBulkSaved() { setBulkMode(false); load() }
+  function goToEmployee(id) { setSelected(id); setEmpTab('exams'); setPage('employees'); setBulkMode(false) }
   const navBtn = active => ({ padding:'8px 14px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13 })
 
   return (
     <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
-
-      {/* ── SIDEBAR ── */}
       <div style={{ width:272, minWidth:272, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
@@ -813,14 +764,12 @@ export default function App() {
             })}
           </div>
           <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB' }}>
-            <button onClick={()=>setAddingTr(true)} style={{ ...BTN('#F0F4FF','#1565C0'), width:'100%', padding:'10px' }}>+ Янги тренинг</button>
+            <button onClick={()=>{ setEditingTraining(null); setNewTr({ title:'', date:'', questions:[''] }); setAddingTr(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), width:'100%', padding:'10px' }}>+ Янги тренинг</button>
           </div>
         </>}
       </div>
 
-      {/* ── MAIN CONTENT ── */}
       <div style={{ flex:1, overflowY:'auto', padding:22 }}>
-
         {adding && (
           <div style={{ maxWidth:440, ...CARD }}>
             <h2 style={{ margin:'0 0 16px', fontSize:17 }}>Янги ходим қўшиш</h2>
@@ -885,15 +834,15 @@ export default function App() {
                       <div key={f.key} style={{ ...CARD, gridColumn:(f.type==='textarea'||f.type==='promo')?'1/-1':'auto', marginBottom:0 }}>
                         <label style={LBL}>{f.label}</label>
                         {editing
-                          ? f.type==='textarea' || f.type==='promo'
+                          ? (f.type==='textarea'||f.type==='promo')
                             ? <textarea value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} rows={3} style={{ ...SI, resize:'vertical' }} />
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
-                          : f.key === 'promoList'
+                          : f.key==='promoList'
                             ? <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:2 }}>
-                              {val.split('\n').map((d,i) => (
-                                <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:13, fontWeight:600 }}>{d}</span>
-                              ))}
-                             </div>
+                                {val.split('\n').filter(Boolean).map((d,i) => (
+                                  <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:13, fontWeight:600 }}>{d}</span>
+                                ))}
+                              </div>
                             : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
                         }
                       </div>
@@ -955,7 +904,7 @@ export default function App() {
           <div>
             {addingTr && (
               <div style={{ maxWidth:500, ...CARD }}>
-                <h2 style={{ margin:'0 0 14px', fontSize:17 }}>Янги тренинг қўшиш</h2>
+                <h2 style={{ margin:'0 0 14px', fontSize:17 }}>{editingTraining ? 'Тренингни таҳрирлаш' : 'Янги тренинг қўшиш'}</h2>
                 <label style={LBL}>Тренинг номи</label>
                 <input value={newTr.title} onChange={e=>setNewTr(p=>({...p,title:e.target.value}))} placeholder="Тренинг номи" style={{ ...SI, marginBottom:10 }} />
                 <label style={LBL}>Сана</label>
@@ -970,7 +919,7 @@ export default function App() {
                 <button onClick={()=>setNewTr(p=>({...p,questions:[...p.questions,'']}))} style={{ ...BTN('#F0F4FF','#1565C0'), marginBottom:14, fontSize:12 }}>+ Савол қўшиш</button>
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={handleAddTraining} disabled={saving||!newTr.title.trim()} style={{ ...BTN('#1976D2'), flex:1, opacity:newTr.title.trim()?1:0.4 }}>{saving?'Сақланяпти...':'Сақлаш'}</button>
-                  <button onClick={()=>setAddingTr(false)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                  <button onClick={()=>{ setAddingTr(false); setEditingTraining(null); setNewTr({ title:'', date:'', questions:[''] }) }} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
                 </div>
               </div>
             )}
@@ -983,13 +932,14 @@ export default function App() {
                   onDeleteTraining={handleDeleteTraining}
                   onViewEmployee={goToEmployee}
                   onUploadMaterial={handleUploadMaterial}
+                  onEditTraining={t=>{ setEditingTraining(t); setNewTr({ title:t.title, date:t.date, questions:t.questions?.length?t.questions:[''] }); setAddingTr(true) }}
                 />
               : !addingTr && (
                 <div>
                   <h2 style={{ marginTop:0, marginBottom:14, fontSize:17 }}>Барча тренинглар ({trainings.length})</h2>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
                     {trainings.map(t=>{
-                      const wr  = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id))
+                      const wr = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id))
                       const sc2 = wr.map(e=>e.examResults.find(r=>r.trainingId===t.id).totalScore)
                       const avg2 = sc2.length ? Math.round(sc2.reduce((a,b)=>a+b,0)/sc2.length) : null
                       const pass2 = wr.filter(e=>e.examResults.find(r=>r.trainingId===t.id)?.passed).length

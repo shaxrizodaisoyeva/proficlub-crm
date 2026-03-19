@@ -699,37 +699,36 @@ export default function App() {
   }
 
   async function handleUploadMaterial(training, file) {
-    if (!file) return
-    setSaving(true)
-    try {
-      const ext = file.name.split('.').pop()
-      const path = `${training.id}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('training-materials')
-        .upload(path, file)
-      if (uploadError) throw uploadError
-      const { data: { publicUrl } } = supabase.storage
-        .from('training-materials')
-        .getPublicUrl(path)
-      const updatedMaterials = [
-        ...(training.materials || []),
-        { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
-      ]
-      const { error: updateError } = await supabase
-        .from('trainings')
-        .update({ materials: updatedMaterials })
-        .eq('id', training.id)
-      if (updateError) throw updateError
-      setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
-      setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
-      showToast(`${file.name} юкланди`)
-      await load()
-    } catch(e) {
-      showToast('Хатолик: ' + e.message, 'error')
-    } finally {
-      setSaving(false)
-    }
+  if (!file) return
+  setSaving(true)
+  try {
+    const ext = file.name.split('.').pop()
+    const path = `${training.id}/${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('training-materials')
+      .upload(path, file)
+    if (uploadError) throw uploadError
+    const { data: { publicUrl } } = supabase.storage
+      .from('training-materials')
+      .getPublicUrl(path)
+    const updatedMaterials = [
+      ...(training.materials || []),
+      { name: file.name, size: `${(file.size/1024/1024).toFixed(1)} МБ`, url: publicUrl }
+    ]
+    const { error: updateError } = await supabase
+      .from('trainings')
+      .update({ materials: updatedMaterials })
+      .eq('id', training.id)
+    if (updateError) throw updateError
+    setTrainings(p => p.map(t => t.id === training.id ? { ...t, materials: updatedMaterials } : t))
+    setSelTraining(prev => ({ ...prev, materials: updatedMaterials }))
+    showToast(`${file.name} юкланди`)
+  } catch(e) {
+    showToast('Хатолик: ' + e.message, 'error')
+  } finally {
+    setSaving(false)
   }
+}
 
   function handleBulkSaved() {
     setBulkMode(false)

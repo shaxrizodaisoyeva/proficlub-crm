@@ -307,7 +307,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10, marginTop:14 }}>
-              {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
+              {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].filter(x=>x.res.totalScore>=60).sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
                 { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
               ].map(({ label, arr, border, titleColor, medals, medalText='#fff' }) => (
                 arr.length === 0 && label.includes('Эътибор') ? null :

@@ -354,6 +354,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{s.session_participants?.length || 0} иштирокчи</span>
+                  <button onClick={()=>onBulkEntry(training, s)} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), fontSize:11, padding:'4px 10px' }}>⚡ Натижа</button>
                   <button onClick={()=>{ setEditingSession(s); setNewSession({ city:s.city, date:s.date, trainer:s.trainer||'', selectedEmps:(s.session_participants||[]).map(p=>p.employee_id) }); setAddingSession(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'4px 8px' }}>✏️</button>
                   <button onClick={()=>handleDeleteSession(s.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'4px 8px' }}>🗑️</button>
                 </div>
@@ -466,7 +467,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   )
 }
 
-function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
+function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) {
   const [scores, setScores] = useState({})
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
@@ -481,7 +482,9 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
   },[training.id, employees])
 
   const filledCount = Object.keys(scores).filter(id=>scores[id]?.mcScore!==''&&scores[id]?.mcScore!=null).length
-  const filtered = employees.filter(e=>e.name.toLowerCase().includes(search.toLowerCase()))
+  const sessionEmpIds = session?.session_participants?.map(p => p.employee_id) || null
+  const allEmps = sessionEmpIds ? employees.filter(e => sessionEmpIds.includes(e.id)) : employees
+  const filtered = allEmps.filter(e=>e.name.toLowerCase().includes(search.toLowerCase()))
 
   async function handleSave() {
     setSaving(true)
@@ -584,6 +587,7 @@ export default function App() {
   const [saving, setSaving]       = useState(false)
   const [selTraining, setSelTraining] = useState(null)
   const [bulkMode, setBulkMode]   = useState(false)
+  const [selSession, setSelSession] = useState(null)
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
@@ -928,7 +932,11 @@ export default function App() {
               ? <TrainingDashboard
                   training={trainings.find(t=>t.id===selTraining?.id)||selTraining}
                   employees={employees}
-                  onBulkEntry={t=>{ setSelTraining(t); setBulkMode(true) }}
+                  onBulkEntry={(t, session)=>{ 
+                    setSelTraining(t); 
+                    setSelSession(session || null);
+                    setBulkMode(true) 
+                  }}
                   onDeleteTraining={handleDeleteTraining}
                   onViewEmployee={goToEmployee}
                   onUploadMaterial={handleUploadMaterial}
@@ -967,8 +975,9 @@ export default function App() {
           <BulkEntry
             training={selTraining}
             employees={employees}
+            session={selSession}
             onSave={handleBulkSaved}
-            onCancel={()=>setBulkMode(false)}
+            onCancel={()=>{ setBulkMode(false); setSelSession(null) }}
             onToast={showToast}
           />
         )}

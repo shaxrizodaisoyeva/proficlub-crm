@@ -743,7 +743,7 @@ export default function App() {
                   <Avatar name={emp.name} size={34} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
-                    <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Badge role={emp.role} />{last && <span style={{ fontSize:10, fontWeight:700, color:scoreColor(last.totalScore) }}>{last.totalScore}</span>}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Badge role={emp.role} /></div>
                   </div>
                 </div>
               )

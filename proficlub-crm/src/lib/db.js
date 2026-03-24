@@ -96,7 +96,7 @@ export async function saveBulkExamResults(training, updates) {
       date: training.date,
       mcScore: update.score,
       totalScore: update.score,
-      passed: update.score >= 70,
+      passed: update.score >= 60,
       openAnswers: update.openAnswers ?? [],
     }
     return supabase

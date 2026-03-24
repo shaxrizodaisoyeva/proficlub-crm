@@ -510,7 +510,7 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
         </div>
       </div>
       <div style={{ background:'#FFF8E1', border:'1.5px solid #FFE082', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#7B5800' }}>
-        💡 Тест баллини киритинг (0–100). Ўтиш чегараси: <strong>70 балл</strong>.
+        💡 Тест баллини киритинг (0–100). Ўтиш чегараси: <strong>60 балл</strong>.
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Ходим қидириш..." style={{ ...SI, marginBottom:12 }} />
       <div style={{ ...CARD, padding:0, overflow:'auto' }}>
@@ -532,7 +532,7 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
               const has = sc.mcScore !== '' && sc.mcScore != null
               const sn = Number(sc.mcScore)
               return (
-                <tr key={emp.id} style={{ borderTop:'1px solid #F0F0F0', background:has?(sn>=70?'rgba(76,175,80,0.04)':'rgba(239,83,80,0.04)'):'transparent' }}>
+                <tr key={emp.id} style={{ borderTop:'1px solid #F0F0F0', background:has?(sn>=60?'rgba(76,175,80,0.04)':'rgba(239,83,80,0.04)'):'transparent' }}>
                   <td style={{ padding:'7px 14px' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:11, color:'#bbb', width:20 }}>{idx+1}</span>
@@ -543,8 +543,8 @@ function BulkEntry({ training, employees, onSave, onCancel, onToast }) {
                   <td style={{ padding:'7px 14px' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                       <input type="number" min="0" max="100" value={sc.mcScore??''} onChange={e=>setScores(p=>({...p,[emp.id]:{...p[emp.id],mcScore:e.target.value}}))} placeholder="—"
-                        style={{ width:64, padding:'6px 8px', border:'1.5px solid', borderColor:has?(sn>=70?'#A5D6A7':'#EF9A9A'):'#E0E0E0', borderRadius:7, fontSize:14, fontWeight:800, textAlign:'center', outline:'none', background:'#fff', color:has?scoreColor(sn):'#333' }} />
-                      {has && <span style={{ fontSize:11, fontWeight:700, color:sn>=70?'#388E3C':'#C62828' }}>{sn>=70?'✓':'✗'}</span>}
+                        style={{ width:64, padding:'6px 8px', border:'1.5px solid', borderColor:has?(sn>=60?'#A5D6A7':'#EF9A9A'):'#E0E0E0', borderRadius:7, fontSize:14, fontWeight:800, textAlign:'center', outline:'none', background:'#fff', color:has?scoreColor(sn):'#333' }} />
+                      {has && <span style={{ fontSize:11, fontWeight:700, color:sn>=60?'#388E3C':'#C62828' }}>{sn>=60?'✓':'✗'}</span>}
                     </div>
                   </td>
                   {(training.questions||[]).map((q,i)=>(

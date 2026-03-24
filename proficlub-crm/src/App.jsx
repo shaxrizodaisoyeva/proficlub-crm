@@ -75,8 +75,8 @@ const ROLE_FIELDS = {
   ],
 }
 
-const scoreColor = s => !s && s !== 0 ? '#aaa' : s >= 85 ? '#2E7D32' : s >= 70 ? '#F57C00' : '#C62828'
-const scoreBg    = s => !s && s !== 0 ? '#f0f0f0' : s >= 85 ? '#E8F5E9' : s >= 70 ? '#FFF8E1' : '#FFEBEE'
+const scoreColor = s => !s && s !== 0 ? '#aaa' : s >= 85 ? '#2E7D32' : s >= 60 ? '#F57C00' : '#C62828'
+const scoreBg    = s => !s && s !== 0 ? '#f0f0f0' : s >= 85 ? '#E8F5E9' : s >= 60 ? '#FFF8E1' : '#FFEBEE'
 
 function Badge({ role }) {
   const c = ROLE_COLORS[role] || { bg:'#f0f0f0', text:'#555', dot:'#999' }

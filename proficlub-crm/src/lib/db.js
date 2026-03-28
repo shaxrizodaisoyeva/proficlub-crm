@@ -148,3 +148,59 @@ export async function saveSessionParticipants(sessionId, participants) {
     })))
   if (error) throw error
 }
+
+// ── PRAKTIKUM ────────────────────────────────────────────────────────────────
+export async function fetchPraktikum() {
+  const { data, error } = await supabase
+    .from('praktikum')
+    .select('*, praktikum_participants(*, employees(id, name, role))')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createPraktikum(p) {
+  const { data, error } = await supabase
+    .from('praktikum')
+    .insert({ title: p.title, date: p.date, description: p.description || null })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updatePraktikum(id, fields) {
+  const { error } = await supabase
+    .from('praktikum')
+    .update(fields)
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deletePraktikum(id) {
+  const { error } = await supabase.from('praktikum').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function addPraktikumParticipant(praktikumId, employeeId) {
+  const { error } = await supabase
+    .from('praktikum_participants')
+    .insert({ praktikum_id: praktikumId, employee_id: employeeId, star: true })
+  if (error) throw error
+}
+
+export async function updatePraktikumParticipant(id, fields) {
+  const { error } = await supabase
+    .from('praktikum_participants')
+    .update(fields)
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function removePraktikumParticipant(id) {
+  const { error } = await supabase
+    .from('praktikum_participants')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}

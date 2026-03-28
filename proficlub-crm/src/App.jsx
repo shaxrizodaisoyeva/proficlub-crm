@@ -3,6 +3,8 @@ import {
   fetchEmployees, createEmployee, updateEmployee, deleteEmployee,
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
+  fetchPraktikum, createPraktikum, updatePraktikum, deletePraktikum,
+  addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -141,6 +143,208 @@ function DonutChart({ passed, failed }) {
         <div style={{ fontSize:16, fontWeight:900, color:'#2E7D32' }}>{Math.round(pct*100)}%</div>
         <div style={{ fontSize:9, color:'#888' }}>ўтди</div>
       </div>
+    </div>
+  )
+}
+
+// ── PRAKTIKUM DASHBOARD ───────────────────────────────────────────────────────
+function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, showToast }) {
+  const [addingEmp, setAddingEmp] = useState(false)
+  const [empSearch, setEmpSearch] = useState('')
+  const [editingP, setEditingP]   = useState(null) // participant being edited
+
+  const participants = prak.praktikum_participants || []
+  const starCount    = participants.filter(p => p.star).length
+
+  async function handleAddParticipant(empId) {
+    try {
+      await addPraktikumParticipant(prak.id, empId)
+      await onRefresh()
+      showToast('Иштирокчи қўшилди')
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  async function handleRemoveParticipant(id) {
+    try {
+      await removePraktikumParticipant(id)
+      await onRefresh()
+      showToast('Иштирокчи ўчирилди')
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  async function handleUpdateParticipant(id, fields) {
+    try {
+      await updatePraktikumParticipant(id, fields)
+      await onRefresh()
+      setEditingP(null)
+      showToast('Сақланди')
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  async function handleUploadHomework(participantId, file) {
+    if (!file) return
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `praktikum/${prak.id}/${participantId}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
+      await updatePraktikumParticipant(participantId, {
+        homework_url: publicUrl,
+        homework_name: file.name,
+        submitted_at: new Date().toISOString(),
+      })
+      await onRefresh()
+      showToast(`${file.name} юкланди`)
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  const alreadyIds = participants.map(p => p.employee_id)
+  const availableEmps = employees.filter(e =>
+    !alreadyIds.includes(e.id) &&
+    e.name.toLowerCase().includes(empSearch.toLowerCase())
+  )
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ ...CARD, borderTop:'4px solid #F59E0B' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:10 }}>
+          <div>
+            <div style={{ fontSize:11, color:'#F59E0B', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>⭐ Практикум</div>
+            <h2 style={{ margin:'0 0 4px', fontSize:20 }}>{prak.title}</h2>
+            <div style={{ fontSize:12, color:'#888' }}>{prak.date} · {participants.length} иштирокчи · {starCount} ⭐</div>
+            {prak.description && <div style={{ fontSize:13, color:'#555', marginTop:6 }}>{prak.description}</div>}
+          </div>
+          <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+            <button onClick={()=>setAddingEmp(true)} style={{ ...BTN('#F59E0B') }}>+ Иштирокчи қўшиш</button>
+            <button onClick={()=>onEdit(prak)} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB' }}>✏️ Таҳрирлаш</button>
+            <button onClick={()=>onDelete(prak.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Participants */}
+      {participants.length === 0 ? (
+        <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>⭐</div>
+          <div style={{ marginBottom:12 }}>Ҳали иштирокчи йўқ</div>
+          <button onClick={()=>setAddingEmp(true)} style={BTN('#F59E0B')}>+ Иштирокчи қўшиш</button>
+        </div>
+      ) : participants.map(p => {
+        const emp = p.employees
+        if (!emp) return null
+        const isEditing = editingP?.id === p.id
+        return (
+          <div key={p.id} style={{ ...CARD, borderLeft:`4px solid ${p.star ? '#F59E0B' : '#E0E0E0'}` }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+              <div style={{ position:'relative' }}>
+                <Avatar name={emp.name} size={40} />
+                {p.star && <span style={{ position:'absolute', top:-4, right:-4, fontSize:14 }}>⭐</span>}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:6 }}>
+                  <span style={{ fontWeight:800, fontSize:14 }}>{emp.name}</span>
+                  <Badge role={emp.role} />
+                  {p.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
+                </div>
+
+                {/* Homework */}
+                {p.homework_url ? (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                    <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name || 'Уй вазифаси'}</a>
+                    <span style={{ fontSize:11, color:'#888' }}>{p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : ''}</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize:12, color:'#aaa', marginBottom:6 }}>📭 Уй вазифаси юборилмаган</div>
+                )}
+
+                {/* Feedback */}
+                {p.feedback && !isEditing && (
+                  <div style={{ background:'#F8F9FA', borderRadius:8, padding:'7px 10px', fontSize:13, color:'#555', marginBottom:6 }}>
+                    💬 {p.feedback}
+                  </div>
+                )}
+
+                {/* Edit form */}
+                {isEditing && (
+                  <div style={{ background:'#F8F9FA', borderRadius:10, padding:12, marginBottom:8 }}>
+                    <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+                      <div style={{ flex:1 }}>
+                        <label style={LBL}>Балл (0–100)</label>
+                        <input type="number" min="0" max="100"
+                          defaultValue={editingP.grade ?? ''}
+                          onChange={e=>setEditingP(p=>({...p, grade: e.target.value ? Number(e.target.value) : null}))}
+                          style={{ ...SI }} />
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <label style={LBL}>⭐ Ҳолати</label>
+                        <select
+                          defaultValue={editingP.star ? 'yes' : 'no'}
+                          onChange={e=>setEditingP(p=>({...p, star: e.target.value === 'yes'}))}
+                          style={{ ...SI }}>
+                          <option value="yes">⭐ Практикумда</option>
+                          <option value="no">Практикумдан чиқди</option>
+                        </select>
+                      </div>
+                    </div>
+                    <label style={LBL}>Изоҳ / Фидбек</label>
+                    <textarea
+                      defaultValue={editingP.feedback ?? ''}
+                      onChange={e=>setEditingP(p=>({...p, feedback: e.target.value}))}
+                      rows={2} style={{ ...SI, resize:'vertical', marginBottom:8 }} />
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={()=>handleUpdateParticipant(p.id, { grade:editingP.grade, star:editingP.star, feedback:editingP.feedback })}
+                        style={{ ...BTN('#388E3C'), flex:1 }}>✅ Сақлаш</button>
+                      <button onClick={()=>setEditingP(null)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              {!isEditing && (
+                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                  <button onClick={()=>setEditingP({...p})} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'5px 10px', fontSize:12 }}>✏️</button>
+                  <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', padding:'5px 10px', fontSize:12, cursor:'pointer', textAlign:'center' }}>
+                    📎
+                    <input type="file" style={{ display:'none' }} onChange={e=>handleUploadHomework(p.id, e.target.files[0])} />
+                  </label>
+                  <button onClick={()=>handleRemoveParticipant(p.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'5px 10px', fontSize:12 }}>🗑️</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Add participant modal */}
+      {addingEmp && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#fff', borderRadius:16, padding:24, width:'100%', maxWidth:480, maxHeight:'80vh', overflowY:'auto' }}>
+            <h3 style={{ margin:'0 0 14px', fontSize:17 }}>Иштирокчи қўшиш</h3>
+            <input value={empSearch} onChange={e=>setEmpSearch(e.target.value)} placeholder="🔍 Қидириш..." style={{ ...SI, marginBottom:10 }} />
+            <div style={{ maxHeight:300, overflowY:'auto', border:'1.5px solid #E0E0E0', borderRadius:8 }}>
+              {availableEmps.length === 0
+                ? <div style={{ padding:20, textAlign:'center', color:'#aaa' }}>Топилмади</div>
+                : availableEmps.map(e => (
+                  <div key={e.id} onClick={()=>{ handleAddParticipant(e.id); setAddingEmp(false); setEmpSearch('') }}
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', cursor:'pointer', borderBottom:'1px solid #F5F5F5' }}
+                    onMouseEnter={el=>el.currentTarget.style.background='#EEF4FF'}
+                    onMouseLeave={el=>el.currentTarget.style.background='transparent'}>
+                    <Avatar name={e.name} size={30} />
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13 }}>{e.name}</div>
+                      <Badge role={e.role} />
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+            <button onClick={()=>{ setAddingEmp(false); setEmpSearch('') }} style={{ ...BTN('#F5F7FA','#555'), width:'100%', marginTop:12, border:'1.5px solid #ddd' }}>Бекор</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -572,6 +776,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
 export default function App() {
   const [employees, setEmployees] = useState([])
   const [trainings, setTrainings] = useState([])
+  const [praktikums, setPraktikums] = useState([])
   const [loading, setLoading]     = useState(true)
   const [toast, setToast]         = useState(null)
   const [page, setPage]           = useState('employees')
@@ -591,6 +796,11 @@ export default function App() {
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
+  // Praktikum states
+  const [selPrak, setSelPrak]     = useState(null)
+  const [addingPrak, setAddingPrak] = useState(false)
+  const [editingPrak, setEditingPrak] = useState(null)
+  const [newPrak, setNewPrak]     = useState({ title:'', date:'', description:'' })
 
   const showToast = useCallback((msg, type='success') => {
     setToast({ msg, type })
@@ -600,9 +810,10 @@ export default function App() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [emps, trs] = await Promise.all([fetchEmployees(), fetchTrainings()])
+      const [emps, trs, praks] = await Promise.all([fetchEmployees(), fetchTrainings(), fetchPraktikum()])
       setEmployees(emps)
       setTrainings(trs)
+      setPraktikums(praks)
     } catch(e) { showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error') }
     finally { setLoading(false) }
   }, [showToast])
@@ -657,10 +868,7 @@ export default function App() {
     try {
       if (editingTraining) {
         const questions = newTr.questions.filter(q=>q.trim())
-        const { error } = await supabase
-          .from('trainings')
-          .update({ title: newTr.title, date: newTr.date, questions })
-          .eq('id', editingTraining.id)
+        const { error } = await supabase.from('trainings').update({ title:newTr.title, date:newTr.date, questions }).eq('id', editingTraining.id)
         if (error) throw error
         setTrainings(p => p.map(t => t.id === editingTraining.id ? { ...t, title:newTr.title, date:newTr.date, questions } : t))
         setSelTraining(prev => ({ ...prev, title:newTr.title, date:newTr.date, questions }))
@@ -708,21 +916,54 @@ export default function App() {
     finally { setSaving(false) }
   }
 
+  // Praktikum handlers
+  async function handleSavePrak() {
+    if (!newPrak.title.trim()) return
+    setSaving(true)
+    try {
+      if (editingPrak) {
+        await updatePraktikum(editingPrak.id, { title:newPrak.title, date:newPrak.date, description:newPrak.description })
+        showToast(`"${newPrak.title}" янгиланди`)
+        setEditingPrak(null)
+      } else {
+        const created = await createPraktikum(newPrak)
+        showToast(`"${created.title}" практикуми яратилди`)
+      }
+      await load()
+      setAddingPrak(false)
+      setNewPrak({ title:'', date:'', description:'' })
+    } catch(e) { showToast(e.message,'error') }
+    finally { setSaving(false) }
+  }
+
+  async function handleDeletePrak(id) {
+    setSaving(true)
+    try {
+      await deletePraktikum(id)
+      setPraktikums(p=>p.filter(x=>x.id!==id))
+      setSelPrak(null)
+      showToast('Практикум ўчирилди')
+    } catch(e) { showToast(e.message,'error') }
+    finally { setSaving(false) }
+  }
+
   function handleBulkSaved() { setBulkMode(false); load() }
   function goToEmployee(id) { setSelected(id); setEmpTab('exams'); setPage('employees'); setBulkMode(false) }
   const navBtn = active => ({ padding:'8px 14px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13 })
 
   return (
     <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
+      {/* SIDEBAR */}
       <div style={{ width:272, minWidth:272, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>
             <div><div style={{ fontWeight:800, fontSize:14 }}>ПрофиКлуб CRM</div><div style={{ fontSize:10, color:'#888' }}>Ходимлар базаси · {employees.length} та</div></div>
           </div>
-          <div style={{ display:'flex', gap:4 }}>
+          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             <button style={navBtn(page==='employees')} onClick={()=>{ setPage('employees'); setBulkMode(false) }}>👥 Ходимлар</button>
             <button style={navBtn(page==='exams')} onClick={()=>{ setPage('exams'); setBulkMode(false) }}>📋 Тренинглар</button>
+            <button style={navBtn(page==='praktikum')} onClick={()=>{ setPage('praktikum'); setBulkMode(false) }}>⭐ Практикум</button>
           </div>
         </div>
 
@@ -736,18 +977,15 @@ export default function App() {
             </div>
           </div>
           <div style={{ flex:1, overflowY:'auto' }}>
-            {loading ? <Spinner /> : filtered.map(emp=>{
-              const last = emp.examResults?.slice(-1)[0]
-              return (
-                <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?'#EEF4FF':'transparent', borderLeft:selected===emp.id?'3px solid #1976D2':'3px solid transparent' }}>
-                  <Avatar name={emp.name} size={34} />
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
-                    <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Badge role={emp.role} /></div>
-                  </div>
+            {loading ? <Spinner /> : filtered.map(emp=>(
+              <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?'#EEF4FF':'transparent', borderLeft:selected===emp.id?'3px solid #1976D2':'3px solid transparent' }}>
+                <Avatar name={emp.name} size={34} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Badge role={emp.role} /></div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
           <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB' }}>
             <button onClick={()=>{ setAdding(true); setSelected(null) }} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), width:'100%', padding:'10px' }}>+ Янги ходим</button>
@@ -771,9 +1009,30 @@ export default function App() {
             <button onClick={()=>{ setEditingTraining(null); setNewTr({ title:'', date:'', questions:[''] }); setAddingTr(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), width:'100%', padding:'10px' }}>+ Янги тренинг</button>
           </div>
         </>}
+
+        {page==='praktikum' && <>
+          <div style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
+            <div style={{ padding:'8px 14px 4px', fontSize:10, fontWeight:700, color:'#bbb', textTransform:'uppercase' }}>Практикумлар</div>
+            {loading ? <Spinner /> : praktikums.map(p=>{
+              const starCount = (p.praktikum_participants||[]).filter(x=>x.star).length
+              return (
+                <div key={p.id} onClick={()=>setSelPrak(p)} style={{ padding:'9px 14px', cursor:'pointer', borderLeft:selPrak?.id===p.id?'3px solid #F59E0B':'3px solid transparent', background:selPrak?.id===p.id?'#FFFBEB':'transparent' }}>
+                  <div style={{ fontWeight:700, fontSize:13 }}>{p.title}</div>
+                  <div style={{ fontSize:11, color:'#888' }}>{p.date} · {starCount} ⭐</div>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB' }}>
+            <button onClick={()=>{ setEditingPrak(null); setNewPrak({ title:'', date:'', description:'' }); setAddingPrak(true) }} style={{ ...BTN('#FEF3C7','#92400E'), width:'100%', padding:'10px', border:'1.5px solid #FDE68A' }}>+ Янги практикум</button>
+          </div>
+        </>}
       </div>
 
+      {/* MAIN CONTENT */}
       <div style={{ flex:1, overflowY:'auto', padding:22 }}>
+
+        {/* Add employee */}
         {adding && (
           <div style={{ maxWidth:440, ...CARD }}>
             <h2 style={{ margin:'0 0 16px', fontSize:17 }}>Янги ходим қўшиш</h2>
@@ -790,6 +1049,7 @@ export default function App() {
           </div>
         )}
 
+        {/* Employee detail */}
         {page==='employees' && selEmp && !adding && (()=>{
           const fields = ROLE_FIELDS[selEmp.role] || []
           return (
@@ -805,6 +1065,7 @@ export default function App() {
                     <Badge role={selEmp.role} />
                     {selEmp.hireDate && <span style={{ fontSize:11, color:'#888' }}>Иш бошлаган: {selEmp.hireDate}</span>}
                     <span style={{ fontSize:11, color:'#888' }}>{selEmp.examResults?.length||0} та имтиҳон</span>
+                    {praktikums.some(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id&&p.star)) && <span style={{ fontSize:13 }}>⭐</span>}
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:7 }}>
@@ -904,6 +1165,7 @@ export default function App() {
           </div>
         )}
 
+        {/* TRAININGS PAGE */}
         {page==='exams' && !bulkMode && (
           <div>
             {addingTr && (
@@ -932,11 +1194,7 @@ export default function App() {
               ? <TrainingDashboard
                   training={trainings.find(t=>t.id===selTraining?.id)||selTraining}
                   employees={employees}
-                  onBulkEntry={(t, session)=>{ 
-                    setSelTraining(t); 
-                    setSelSession(session || null);
-                    setBulkMode(true) 
-                  }}
+                  onBulkEntry={(t, session)=>{ setSelTraining(t); setSelSession(session || null); setBulkMode(true) }}
                   onDeleteTraining={handleDeleteTraining}
                   onViewEmployee={goToEmployee}
                   onUploadMaterial={handleUploadMaterial}
@@ -980,6 +1238,60 @@ export default function App() {
             onCancel={()=>{ setBulkMode(false); setSelSession(null) }}
             onToast={showToast}
           />
+        )}
+
+        {/* PRAKTIKUM PAGE */}
+        {page==='praktikum' && (
+          <div>
+            {addingPrak && (
+              <div style={{ maxWidth:500, ...CARD }}>
+                <h2 style={{ margin:'0 0 14px', fontSize:17 }}>{editingPrak ? 'Практикумни таҳрирлаш' : 'Янги практикум'}</h2>
+                <label style={LBL}>Номи</label>
+                <input value={newPrak.title} onChange={e=>setNewPrak(p=>({...p,title:e.target.value}))} placeholder="Практикум номи" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Сана</label>
+                <input type="text" value={newPrak.date} onChange={e=>setNewPrak(p=>({...p,date:e.target.value}))} placeholder="2025-03-18" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Тавсиф / Уй вазифаси (ихтиёрий)</label>
+                <textarea value={newPrak.description} onChange={e=>setNewPrak(p=>({...p,description:e.target.value}))} rows={3} placeholder="Практикум тавсифи..." style={{ ...SI, resize:'vertical', marginBottom:14 }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={handleSavePrak} disabled={saving||!newPrak.title.trim()} style={{ ...BTN('#F59E0B'), flex:1, opacity:newPrak.title.trim()?1:0.4 }}>{saving?'Сақланяпти...':'Сақлаш'}</button>
+                  <button onClick={()=>{ setAddingPrak(false); setEditingPrak(null); setNewPrak({ title:'', date:'', description:'' }) }} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                </div>
+              </div>
+            )}
+
+            {selPrak
+              ? <PraktikumDashboard
+                  prak={praktikums.find(p=>p.id===selPrak.id)||selPrak}
+                  employees={employees}
+                  onDelete={handleDeletePrak}
+                  onEdit={p=>{ setEditingPrak(p); setNewPrak({ title:p.title, date:p.date||'', description:p.description||'' }); setAddingPrak(true) }}
+                  onRefresh={async ()=>{ const praks = await fetchPraktikum(); setPraktikums(praks); setSelPrak(praks.find(p=>p.id===selPrak.id)||null) }}
+                  showToast={showToast}
+                />
+              : !addingPrak && (
+                <div>
+                  <h2 style={{ marginTop:0, marginBottom:14, fontSize:17 }}>Барча практикумлар ({praktikums.length})</h2>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
+                    {praktikums.map(p=>{
+                      const starCount = (p.praktikum_participants||[]).filter(x=>x.star).length
+                      const total = (p.praktikum_participants||[]).length
+                      return (
+                        <div key={p.id} onClick={()=>setSelPrak(p)} style={{ ...CARD, cursor:'pointer', marginBottom:0, borderTop:'3px solid #F59E0B' }}>
+                          <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{p.title}</div>
+                          <div style={{ fontSize:11, color:'#888', marginBottom:10 }}>{p.date}</div>
+                          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                            <span style={{ background:'#FFFBEB', color:'#92400E', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{total} иштирокчи</span>
+                            <span style={{ background:'#FFFBEB', color:'#B45309', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{starCount} ⭐</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {praktikums.length===0 && !addingPrak && <div style={{ ...CARD, color:'#aaa', textAlign:'center', padding:40 }}>Ҳали практикум йўқ.</div>}
+                  </div>
+                </div>
+              )
+            }
+          </div>
         )}
       </div>
 

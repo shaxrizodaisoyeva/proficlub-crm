@@ -153,7 +153,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
   const [empSearch, setEmpSearch] = useState('')
   const [editingP, setEditingP]   = useState(null) // participant being edited
 
-  const participants = prak.praktikum_participants || []
+  const starEmployees = employees.filter(e => e.isStar)
   const starCount    = participants.filter(p => p.star).length
 
   async function handleAddParticipant(empId) {
@@ -225,95 +225,70 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
       </div>
 
       {/* Participants */}
-      {participants.length === 0 ? (
+      {starEmployees.length === 0 ? (
         <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
           <div style={{ fontSize:36, marginBottom:10 }}>⭐</div>
-          <div style={{ marginBottom:12 }}>Ҳали иштирокчи йўқ</div>
-          <button onClick={()=>setAddingEmp(true)} style={BTN('#F59E0B')}>+ Иштирокчи қўшиш</button>
+          <div>Ҳали практикум аъзолари йўқ</div>
+          <div style={{ fontSize:12, marginTop:8 }}>Ходим профилида ⭐ белгиланг</div>
         </div>
-      ) : participants.map(p => {
-        const emp = p.employees
-        if (!emp) return null
-        const isEditing = editingP?.id === p.id
+      ) : starEmployees.map(emp => {
+        const p = participants.find(x => x.employee_id === emp.id)
         return (
-          <div key={p.id} style={{ ...CARD, borderLeft:`4px solid ${p.star ? '#F59E0B' : '#E0E0E0'}` }}>
-            <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+          <div key={emp.id} style={{ ...CARD, borderLeft:'4px solid #F59E0B' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ position:'relative' }}>
                 <Avatar name={emp.name} size={40} />
-                {p.star && <span style={{ position:'absolute', top:-4, right:-4, fontSize:14 }}>⭐</span>}
+                <span style={{ position:'absolute', top:-4, right:-4, fontSize:14 }}>⭐</span>
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:6 }}>
-                  <span style={{ fontWeight:800, fontSize:14 }}>{emp.name}</span>
-                  <Badge role={emp.role} />
-                  {p.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
-                </div>
-
-                {/* Homework */}
-                {p.homework_url ? (
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                    <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name || 'Уй вазифаси'}</a>
-                    <span style={{ fontSize:11, color:'#888' }}>{p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : ''}</span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize:12, color:'#aaa', marginBottom:6 }}>📭 Уй вазифаси юборилмаган</div>
-                )}
-
-                {/* Feedback */}
-                {p.feedback && !isEditing && (
-                  <div style={{ background:'#F8F9FA', borderRadius:8, padding:'7px 10px', fontSize:13, color:'#555', marginBottom:6 }}>
-                    💬 {p.feedback}
-                  </div>
-                )}
-
-                {/* Edit form */}
-                {isEditing && (
-                  <div style={{ background:'#F8F9FA', borderRadius:10, padding:12, marginBottom:8 }}>
-                    <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
-                      <div style={{ flex:1 }}>
-                        <label style={LBL}>Балл (0–100)</label>
-                        <input type="number" min="0" max="100"
-                          defaultValue={editingP.grade ?? ''}
-                          onChange={e=>setEditingP(p=>({...p, grade: e.target.value ? Number(e.target.value) : null}))}
-                          style={{ ...SI }} />
-                      </div>
-                      <div style={{ flex:1 }}>
-                        <label style={LBL}>⭐ Ҳолати</label>
-                        <select
-                          defaultValue={editingP.star ? 'yes' : 'no'}
-                          onChange={e=>setEditingP(p=>({...p, star: e.target.value === 'yes'}))}
-                          style={{ ...SI }}>
-                          <option value="yes">⭐ Практикумда</option>
-                          <option value="no">Практикумдан чиқди</option>
-                        </select>
-                      </div>
-                    </div>
-                    <label style={LBL}>Изоҳ / Фидбек</label>
-                    <textarea
-                      defaultValue={editingP.feedback ?? ''}
-                      onChange={e=>setEditingP(p=>({...p, feedback: e.target.value}))}
-                      rows={2} style={{ ...SI, resize:'vertical', marginBottom:8 }} />
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button onClick={()=>handleUpdateParticipant(p.id, { grade:editingP.grade, star:editingP.star, feedback:editingP.feedback })}
-                        style={{ ...BTN('#388E3C'), flex:1 }}>✅ Сақлаш</button>
-                      <button onClick={()=>setEditingP(null)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
-                    </div>
-                  </div>
-                )}
+                <div style={{ fontWeight:800, fontSize:14 }}>{emp.name}</div>
+                <Badge role={emp.role} />
+                {p?.grade != null && <span style={{ marginLeft:8, background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 8px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
+                {p?.feedback && <div style={{ fontSize:12, color:'#555', marginTop:4 }}>💬 {p.feedback}</div>}
+                {p?.homework_url && <div style={{ marginTop:4 }}><a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700 }}>📎 {p.homework_name}</a></div>}
               </div>
-
-              {/* Action buttons */}
-              {!isEditing && (
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <button onClick={()=>setEditingP({...p})} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'5px 10px', fontSize:12 }}>✏️</button>
-                  <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', padding:'5px 10px', fontSize:12, cursor:'pointer', textAlign:'center' }}>
-                    📎
-                    <input type="file" style={{ display:'none' }} onChange={e=>handleUploadHomework(p.id, e.target.files[0])} />
-                  </label>
-                  <button onClick={()=>handleRemoveParticipant(p.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'5px 10px', fontSize:12 }}>🗑️</button>
-                </div>
-              )}
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <button onClick={()=>setEditingP(p ? {...p, employee_id: emp.id} : { employee_id: emp.id, grade: null, star: true, feedback: '', id: null })}
+                  style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'5px 10px', fontSize:12 }}>✏️</button>
+                <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', padding:'5px 10px', fontSize:12, cursor:'pointer', textAlign:'center' }}>
+                  📎
+                  <input type="file" style={{ display:'none' }} onChange={e=>{
+                    if(p) handleUploadHomework(p.id, e.target.files[0])
+                  }} />
+              </label>
             </div>
+          </div>
+          {editingP?.employee_id === emp.id && (
+            <div style={{ background:'#F8F9FA', borderRadius:10, padding:12, marginTop:10 }}>
+              <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                <div style={{ flex:1 }}>
+                  <label style={LBL}>Балл (0–100)</label>
+                  <input type="number" min="0" max="100" defaultValue={editingP.grade ?? ''}
+                    onChange={e=>setEditingP(x=>({...x, grade: e.target.value ? Number(e.target.value) : null}))}
+                    style={{ ...SI }} />
+                  </div>
+                </div>
+                <label style={LBL}>Изоҳ / Фидбек</label>
+                <textarea defaultValue={editingP.feedback ?? ''} onChange={e=>setEditingP(x=>({...x, feedback: e.target.value}))}
+                  rows={2} style={{ ...SI, resize:'vertical', marginBottom:8 }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={async ()=>{
+                    if (editingP.id) {
+                      await handleUpdateParticipant(editingP.id, { grade: editingP.grade, feedback: editingP.feedback })
+                    } else {
+                      await addPraktikumParticipant(prak.id, editingP.employee_id)
+                      const praks = await fetchPraktikum()
+                      const updated = praks.find(x=>x.id===prak.id)
+                      const newP = (updated?.praktikum_participants||[]).find(x=>x.employee_id===editingP.employee_id)
+                      if (newP) await handleUpdateParticipant(newP.id, { grade: editingP.grade, feedback: editingP.feedback })
+                      await onRefresh()
+                    }
+                    setEditingP(null)
+                  }} style={{ ...BTN('#388E3C'), flex:1 }}>✅ Сақлаш</button>
+                  <button onClick={()=>setEditingP(null)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                </div>
+              </div>
+            )}
           </div>
         )
       })}

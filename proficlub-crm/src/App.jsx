@@ -982,7 +982,10 @@ export default function App() {
                 <Avatar name={emp.name} size={34} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Badge role={emp.role} /></div>
+                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}>
+                    <Badge role={emp.role} />
+                    {emp.isStar && <span style={{ fontSize:11 }}>⭐</span>}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1070,7 +1073,16 @@ export default function App() {
                 </div>
                 <div style={{ display:'flex', gap:7 }}>
                   {!editing
-                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button><button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
+                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button>
+                      <button onClick={async ()=>{
+                        const newStar = !selEmp.isStar
+                        await updateEmployee(selEmp.id, { ...selEmp, isStar: newStar })
+                        setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,isStar:newStar}:e))
+                        showToast(newStar ? '⭐ Практикум аъзоси белгиланди' : 'Практикум аъзолигидан чиқарилди')
+                      }} style={{ ...BTN(selEmp.isStar?'#FEF3C7':'#F5F7FA', selEmp.isStar?'#92400E':'#888'), border:`1.5px solid ${selEmp.isStar?'#FDE68A':'#E0E0E0'}` }}>
+                        {selEmp.isStar ? '⭐ Практикумда' : '☆ Практикумга қўшиш'}
+                      </button>
+                      <button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
                     : <><button onClick={handleSaveEdit} disabled={saving} style={BTN('#388E3C')}>{saving?'Сақланяпти...':'✅ Сақлаш'}</button><button onClick={()=>setEditing(false)} style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>❌ Бекор</button></>
                   }
                 </div>

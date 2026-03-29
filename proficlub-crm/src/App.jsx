@@ -153,8 +153,9 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
   const [empSearch, setEmpSearch] = useState('')
   const [editingP, setEditingP]   = useState(null) // participant being edited
 
+  const participants = prak.praktikum_participants || []
   const starEmployees = employees.filter(e => e.isStar)
-  const starCount    = participants.filter(p => p.star).length
+  const starCount = starEmployees.length
 
   async function handleAddParticipant(empId) {
     try {

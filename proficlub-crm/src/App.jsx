@@ -1080,7 +1080,9 @@ export default function App() {
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
-            {loading ? <Spinner /> : filtered.map(emp=>(
+            {loading ? <Spinner /> : filtered.map(emp => {
+              const orgName = emp.organization || emp.data?.organization || '';
+              return (
               <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} 
                 style={{ 
                   display:'flex', 
@@ -1089,7 +1091,7 @@ export default function App() {
                   padding:'9px 12px', 
                   cursor:'pointer', 
                   background:selected===emp.id?'#EEF4FF':'transparent', 
-                  borderLeft: `4px solid ${getOrgColor(emp.organization)}`,
+                  borderLeft: `4px solid ${getOrgColor(orgName)}`,
                   transition: '0.2s'
                 }}>
                 <Avatar name={emp.name} size={34} />
@@ -1099,20 +1101,21 @@ export default function App() {
                     <span style={{ 
                       fontSize: 9, 
                       fontWeight: 800, 
-                      color: getOrgColor(emp.organization),
-                      background: `${getOrgColor(emp.organization)}15`,
+                      color: getOrgColor(orgName),
+                      background: `${getOrgColor(orgName)}15`,
                       padding: '1px 5px',
                       borderRadius: 4,
                       textTransform: 'uppercase'
                     }}>
-                      {emp.organization || 'Т/Й'}
+                      {orgName || 'Т/Й'}
                     </span>
                     <Badge role={emp.role} />
                     {emp.isStar && <span style={{ fontSize:11 }}>⭐</span>}
                   </div>
                 </div>
-              </div>
-            ))}
+               </div>
+              );
+            })}
           </div>
           <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB', flexShrink: 0 }}>
             <button onClick={()=>{ setAdding(true); setSelected(null) }} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), width:'100%', padding:'10px' }}>+ Янги ходим</button>

@@ -1029,7 +1029,7 @@ export default function App() {
                   <input value={filterPlanMax} onChange={e=>setFilterPlanMax(e.target.value)} placeholder="гача" style={{ ...SI, flex:1 }} />
                 </div>
                 <label style={LBL}>Иш бошлаган сана (дан)</label>
-                <input type="date" value={filterHireDate} onChange={e=>setFilterHireDate(e.target.value)} style={{ ...SI, marginBottom:8 }} />
+                <input type="number" value={filterHireDate} onChange={e=>setFilterHireDate(e.target.value)} style={{ ...SI, marginBottom:8 }} />
 
                 <label style={LBL}>Жамоадаги ходимлар сони (мин)</label>
                 <input type="number" value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />

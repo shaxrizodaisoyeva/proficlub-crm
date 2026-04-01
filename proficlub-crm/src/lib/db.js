@@ -10,16 +10,17 @@ export async function fetchEmployees() {
   
   if (error) throw error
   
-  return data.map(row => ({
-    id: row.id,
-    name: row.name,
-    role: row.role,
-    // БУ ЕРДА organization НИ АНИҚ КЎРСАТИБ ЎТАМИЗ:
-    organization: row.organization || row.data?.organization || '',
-    examResults: row.exam_results ?? [],
-    data: row.data, // Асосий data объектни ҳам сақлаб қоламиз
-    ...row.data,
-  }))
+  return data.map(row => {
+  
+    const organization = row.organization || row.data?.organization || row.data?.org || '';
+
+    return {
+      ...row,
+      organization: organization,
+      examResults: row.exam_results ?? [],
+      ...row.data // JSON ичидаги бошқа маълумотларни ҳам ёйиб юборамиз
+    }
+  })
 }
 
 export async function createEmployee(emp) {

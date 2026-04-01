@@ -769,6 +769,15 @@ export default function App() {
   const [selTraining, setSelTraining] = useState(null)
   const [bulkMode, setBulkMode]   = useState(false)
   const [selSession, setSelSession] = useState(null)
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterFirm, setFilterFirm] = useState('')
+  const [filterEduLevel, setFilterEduLevel] = useState('')
+  const [filterSpecialty, setFilterSpecialty] = useState('')
+  const [filterRegion, setFilterRegion] = useState('')
+  const [filterSalesMin, setFilterSalesMin] = useState('')
+  const [filterSalesMax, setFilterSalesMax] = useState('')
+  const [filterPlanMin, setFilterPlanMin] = useState('')
+  const [filterPlanMax, setFilterPlanMax] = useState('')
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
@@ -796,10 +805,31 @@ export default function App() {
 
   useEffect(()=>{ load() }, [load])
 
-  const filtered = useMemo(()=>employees.filter(e=>
-    e.name.toLowerCase().includes(search.toLowerCase()) &&
-    (filterRole==='Барчаси' || e.role===filterRole)
-  ), [employees, search, filterRole])
+  const filtered = useMemo(()=>employees.filter(e=>{
+  if (!e.name.toLowerCase().includes(search.toLowerCase())) return false
+  if (filterRole !== 'Барчаси' && e.role !== filterRole) return false
+  if (filterFirm && e.organization !== filterFirm) return false
+  if (filterEduLevel && e.educationLevel !== filterEduLevel) return false
+  if (filterSpecialty && !e.specialty?.toLowerCase().includes(filterSpecialty.toLowerCase())) return false
+  if (filterRegion && e.region !== filterRegion) return false
+  if (filterSalesMin) {
+    const sales = parseInt((e.sales6Month||'').replace(/\s/g,''))
+    if (isNaN(sales) || sales < parseInt(filterSalesMin)) return false
+  }
+  if (filterSalesMax) {
+    const sales = parseInt((e.sales6Month||'').replace(/\s/g,''))
+    if (isNaN(sales) || sales > parseInt(filterSalesMax)) return false
+  }
+  if (filterPlanMin) {
+    const plan = parseInt((e.planPercent||'').replace('%',''))
+    if (isNaN(plan) || plan < parseInt(filterPlanMin)) return false
+  }
+  if (filterPlanMax) {
+    const plan = parseInt((e.planPercent||'').replace('%',''))
+    if (isNaN(plan) || plan > parseInt(filterPlanMax)) return false
+  }
+  return true
+}), [employees, search, filterRole, filterFirm, filterEduLevel, filterSpecialty, filterRegion, filterSalesMin, filterSalesMax, filterPlanMin, filterPlanMax])
 
   const selEmp = selected ? employees.find(e=>e.id===selected) : null
 
@@ -934,7 +964,9 @@ export default function App() {
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>
-            <div><div style={{ fontWeight:800, fontSize:14 }}>ПрофиКлуб CRM</div><div style={{ fontSize:10, color:'#888' }}>Ходимлар базаси · {employees.length} та</div></div>
+            <div><div style={{ fontWeight:800, fontSize:14 }}>ПрофиКлуб CRM</div><div style={{ fontSize:10, color:'#888' }}>
+                                                                                   {filtered.length !== employees.length ? `${filtered.length} / ${employees.length} та` : `${employees.length} та`}
+                                                                                  </div></div>
           </div>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             <button style={navBtn(page==='employees')} onClick={()=>{ setPage('employees'); setBulkMode(false) }}>👥 Ходимлар</button>
@@ -946,6 +978,50 @@ export default function App() {
         {page==='employees' && <>
           <div style={{ padding:'10px 12px 6px' }}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Қидириш..." style={{ ...SI, marginBottom:8 }} />
+            <button onClick={()=>setShowFilter(p=>!p)} style={{ ...BTN(showFilter?'#1976D2':'#F0F4FF', showFilter?'#fff':'#1565C0'), width:'100%', marginBottom:8, fontSize:12, border:'1.5px solid #BBDEFB' }}>
+              🔽 Кенгайтирилган филтер {showFilter ? '▲' : '▼'}
+            </button>
+            {showFilter && (
+              <div style={{ background:'#F8F9FA', borderRadius:10, padding:10, marginBottom:8 }}>
+                <label style={LBL}>Ташкилот</label>
+                <select value={filterFirm} onChange={e=>setFilterFirm(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {[...new Set(employees.map(e=>e.organization).filter(Boolean))].sort().map(f=>(
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <label style={LBL}>Маълумоти</label>
+                <select value={filterEduLevel} onChange={e=>setFilterEduLevel(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {['Олий','Ўрта махсус','Ўрта','Тугалланмаган олий'].map(v=>(
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+                <label style={LBL}>Мутахассислик</label>
+                <input value={filterSpecialty} onChange={e=>setFilterSpecialty(e.target.value)} placeholder="Фармацевт..." style={{ ...SI, marginBottom:8 }} />
+                <label style={LBL}>Ҳудуд</label>
+                <select value={filterRegion} onChange={e=>setFilterRegion(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {[...new Set(employees.map(e=>e.region).filter(Boolean))].sort().map(r=>(
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <label style={LBL}>6 ой савдо (сўм)</label>
+                <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+                  <input value={filterSalesMin} onChange={e=>setFilterSalesMin(e.target.value)} placeholder="дан (мин)" style={{ ...SI, flex:1 }} />
+                  <input value={filterSalesMax} onChange={e=>setFilterSalesMax(e.target.value)} placeholder="гача (макс)" style={{ ...SI, flex:1 }} />
+                </div>
+                <label style={LBL}>Режа (%)</label>
+                <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+                  <input value={filterPlanMin} onChange={e=>setFilterPlanMin(e.target.value)} placeholder="дан" style={{ ...SI, flex:1 }} />
+                  <input value={filterPlanMax} onChange={e=>setFilterPlanMax(e.target.value)} placeholder="гача" style={{ ...SI, flex:1 }} />
+                </div>
+                <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax('') }}
+                  style={{ ...BTN('#FFEBEE','#C62828'), width:'100%', fontSize:12, border:'1.5px solid #FFCDD2' }}>
+                  🗑️ Филтерни тозалаш
+                </button>
+              </div>
+            )}
             <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
               {['Барчаси',...ROLES].map(r=>(
                 <button key={r} onClick={()=>setFilterRole(r)} style={{ padding:'3px 8px', borderRadius:20, border:'1.5px solid', fontSize:10, fontWeight:700, cursor:'pointer', borderColor:filterRole===r?'#1976D2':'#E0E0E0', background:filterRole===r?'#1976D2':'#fff', color:filterRole===r?'#fff':'#666' }}>{r}</button>

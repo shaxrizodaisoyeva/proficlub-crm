@@ -840,8 +840,8 @@ export default function App() {
     if (isNaN(tSize) || tSize < parseInt(filterTeamSize)) return false
   }
   if (filterTurnover) {
-    const turnover = parseInt(e.staffTurnover || 0)
-    if (isNaN(turnover) || turnover > parseInt(filterTurnover)) return false
+    const turnoverVal = parseInt(e.staffTurnover || 0);
+    if (isNaN(turnoverVal) || turnoverVal > parseInt(filterTurnover)) return false;
   }
   return true
 }), [employees, search, filterRole, filterFirm, filterEduLevel, filterSpecialty, filterRegion, filterSalesMin, filterSalesMax, filterPlanMin, filterPlanMax, filterPlanMax, filterHireDate, filterTeamSize, filterTurnover])

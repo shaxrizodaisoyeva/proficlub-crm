@@ -1083,6 +1083,7 @@ export default function App() {
           <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
             {loading ? <Spinner /> : filtered.map(emp => {
               const orgName = emp.organization || '';
+              console.log("Ходим:", emp.name, "Ташкилот:", emp.organization);
               return (
               <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} 
                 style={{ 

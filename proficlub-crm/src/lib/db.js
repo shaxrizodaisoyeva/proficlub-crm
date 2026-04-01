@@ -6,21 +6,27 @@ export async function fetchEmployees() {
   const { data, error } = await supabase
     .from('employees')
     .select('*')
-    .order('name')
+    .order('name');
   
-  if (error) throw error
+  if (error) throw error;
   
   return data.map(row => {
-  
-    const organization = row.organization || row.data?.organization || row.data?.org || '';
+    // Базадаги ҳамма устунларни ва JSON ичидагиларни битта объектга йиғамиз
+    const combined = { 
+      ...row, 
+      ...(row.data || {}) 
+    };
 
     return {
-      ...row,
-      organization: organization,
+      id: row.id,
+      name: row.name,
+      role: row.role,
+      // Энди ташкилотни аниқ топамиз:
+      organization: combined.organization || combined.org || '',
       examResults: row.exam_results ?? [],
-      ...row.data // JSON ичидаги бошқа маълумотларни ҳам ёйиб юборамиз
-    }
-  })
+      data: row.data || {}
+    };
+  });
 }
 
 export async function createEmployee(emp) {

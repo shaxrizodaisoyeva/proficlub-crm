@@ -831,7 +831,10 @@ export default function App() {
     const plan = parseInt((e.planPercent||'').replace('%',''))
     if (isNaN(plan) || plan > parseInt(filterPlanMax)) return false
   }
-  if (filterHireDate && !e.hireDate?.toString().startsWith(filterHireDate)) return false
+  if (filterHireDate) {
+    const year = e.hireDate ? e.hireDate.toString().substring(0, 4) : '';
+    if (year !== filterHireDate) return false;
+  }
   if (filterTeamSize) {
     const tSize = parseInt(e.teamSize || 0)
     if (isNaN(tSize) || tSize < parseInt(filterTeamSize)) return false

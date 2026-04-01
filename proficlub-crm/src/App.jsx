@@ -778,6 +778,9 @@ export default function App() {
   const [filterSalesMax, setFilterSalesMax] = useState('')
   const [filterPlanMin, setFilterPlanMin] = useState('')
   const [filterPlanMax, setFilterPlanMax] = useState('')
+  const [filterHireDate, setFilterHireDate] = useState('')
+  const [filterTeamSize, setFilterTeamSize] = useState('')
+  const [filterTurnover, setFilterTurnover] = useState('')
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
@@ -828,8 +831,17 @@ export default function App() {
     const plan = parseInt((e.planPercent||'').replace('%',''))
     if (isNaN(plan) || plan > parseInt(filterPlanMax)) return false
   }
+  if (filterHireDate && e.hireDate < filterHireDate) return false
+  if (filterTeamSize) {
+    const tSize = parseInt(e.teamSize || 0)
+    if (isNaN(tSize) || tSize < parseInt(filterTeamSize)) return false
+  }
+  if (filterTurnover) {
+    const turnover = parseInt(e.staffTurnover || 0)
+    if (isNaN(turnover) || turnover > parseInt(filterTurnover)) return false
+  }
   return true
-}), [employees, search, filterRole, filterFirm, filterEduLevel, filterSpecialty, filterRegion, filterSalesMin, filterSalesMax, filterPlanMin, filterPlanMax])
+}), [employees, search, filterRole, filterFirm, filterEduLevel, filterSpecialty, filterRegion, filterSalesMin, filterSalesMax, filterPlanMin, filterPlanMax, filterPlanMax, filterHireDate, filterTeamSize, filterTurnover])
 
   const selEmp = selected ? employees.find(e=>e.id===selected) : null
 
@@ -1016,7 +1028,15 @@ export default function App() {
                   <input value={filterPlanMin} onChange={e=>setFilterPlanMin(e.target.value)} placeholder="дан" style={{ ...SI, flex:1 }} />
                   <input value={filterPlanMax} onChange={e=>setFilterPlanMax(e.target.value)} placeholder="гача" style={{ ...SI, flex:1 }} />
                 </div>
-                <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax('') }}
+                <label style={LBL}>Иш бошлаган сана (дан)</label>
+                <input type="date" value={filterHireDate} onChange={e=>setFilterHireDate(e.target.value)} style={{ ...SI, marginBottom:8 }} />
+
+                <label style={LBL}>Жамоадаги ходимлар сони (мин)</label>
+                <input type="number" value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
+
+                <label style={LBL}>Ходимлар алмашуви (% макс)</label>
+                <input type="number" value={filterTurnover} onChange={e=>setFilterTurnover(e.target.value)} placeholder="%" style={{ ...SI, marginBottom:8 }} />
+                <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax(''); setFilterHireDate(''); setFilterTeamSize(''); setFilterTurnover('') }}
                   style={{ ...BTN('#FFEBEE','#C62828'), width:'100%', fontSize:12, border:'1.5px solid #FFCDD2' }}>
                   🗑️ Филтерни тозалаш
                 </button>

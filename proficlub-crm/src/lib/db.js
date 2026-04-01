@@ -7,12 +7,17 @@ export async function fetchEmployees() {
     .from('employees')
     .select('*')
     .order('name')
+  
   if (error) throw error
+  
   return data.map(row => ({
     id: row.id,
     name: row.name,
     role: row.role,
+    // БУ ЕРДА organization НИ АНИҚ КЎРСАТИБ ЎТАМИЗ:
+    organization: row.organization || row.data?.organization || '',
     examResults: row.exam_results ?? [],
+    data: row.data, // Асосий data объектни ҳам сақлаб қоламиз
     ...row.data,
   }))
 }

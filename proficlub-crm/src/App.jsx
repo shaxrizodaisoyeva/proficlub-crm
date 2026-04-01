@@ -1044,7 +1044,7 @@ export default function App() {
                 <input type="number" value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
 
                 <label style={LBL}>Ходимлар алмашуви (макс)</label>
-                <input type="number" value={filterTurnover} onChange={e=>setFilterTurnover(e.target.value)} placeholder="%" style={{ ...SI, marginBottom:8 }} />
+                <input type="number" value={filterTurnover} onChange={e=>setFilterTurnover(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
                 <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax(''); setFilterHireDate(''); setFilterTeamSize(''); setFilterTurnover('') }}
                   style={{ ...BTN('#FFEBEE','#C62828'), width:'100%', fontSize:12, border:'1.5px solid #FFCDD2' }}>
                   🗑️ Филтрни тозалаш

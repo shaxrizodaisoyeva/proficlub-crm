@@ -6,28 +6,17 @@ export async function fetchEmployees() {
   const { data, error } = await supabase
     .from('employees')
     .select('*')
-    .order('name');
-  
-  if (error) throw error;
-  
-  return data.map(row => {
-    // Базадаги ҳамма устунларни ва JSON ичидагиларни битта объектга йиғамиз
-    const combined = { 
-      ...row, 
-      ...(row.data || {}) 
-    };
-
-    return {
-      id: row.id,
-      name: row.name,
-      role: row.role,
-      // Энди ташкилотни аниқ топамиз:
-      organization: combined.organization || combined.org || '',
-      examResults: row.exam_results ?? [],
-      data: row.data || {}
-    };
-  });
+    .order('name')
+  if (error) throw error
+  return data.map(row => ({
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    examResults: row.exam_results ?? [],
+    ...row.data,
+  }))
 }
+
 export async function createEmployee(emp) {
   const { name, role, examResults = [], ...rest } = emp
   const { data, error } = await supabase

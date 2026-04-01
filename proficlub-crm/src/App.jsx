@@ -981,7 +981,7 @@ export default function App() {
   return (
     <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
       {/* SIDEBAR */}
-      <div style={{ width:272, minWidth:272, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
+      <div style={{ width:272, minWidth:272, height: '100vh', background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column', overflow: 'hidden' }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>
@@ -1003,7 +1003,7 @@ export default function App() {
               🔽 Кенгайтирилган филтр {showFilter ? '▲' : '▼'}
             </button>
             {showFilter && (
-              <div style={{ background:'#F8F9FA', borderRadius:10, padding:10, marginBottom:8 }}>
+              <div style={{ background:'#F8F9FA', borderRadius:10, padding:10, marginBottom:8, maxHeight: 280, overflowY: 'auto', border: '1px solid #eee', flexShrink: 0 }}>
                 <label style={LBL}>Ташкилот</label>
                 <select value={filterFirm} onChange={e=>setFilterFirm(e.target.value)} style={{ ...SI, marginBottom:8 }}>
                   <option value=''>Барчаси</option>
@@ -1057,7 +1057,7 @@ export default function App() {
               ))}
             </div>
           </div>
-          <div style={{ flex:1, overflowY:'auto' }}>
+          <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
             {loading ? <Spinner /> : filtered.map(emp=>(
               <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?'#EEF4FF':'transparent', borderLeft:selected===emp.id?'3px solid #1976D2':'3px solid transparent' }}>
                 <Avatar name={emp.name} size={34} />
@@ -1071,7 +1071,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB' }}>
+          <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB', flexShrink: 0 }}>
             <button onClick={()=>{ setAdding(true); setSelected(null) }} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), width:'100%', padding:'10px' }}>+ Янги ходим</button>
           </div>
         </>}

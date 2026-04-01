@@ -28,7 +28,6 @@ export async function fetchEmployees() {
     };
   });
 }
-
 export async function createEmployee(emp) {
   const { name, role, examResults = [], ...rest } = emp
   const { data, error } = await supabase

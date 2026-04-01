@@ -840,7 +840,10 @@ export default function App() {
     if (isNaN(tSize) || tSize < parseInt(filterTeamSize)) return false
   }
   if (filterTurnover) {
-    const rawValue = String(e.staffTurnover || '0').replace(/\s/g, '');
+    if (!e.staffTurnover && e.staffTurnover !== 0) {
+      return false;
+    }
+    const rawValue = String(e.staffTurnover).replace(/\s/g, '');
     const turnoverNum = parseInt(rawValue);
     if (isNaN(turnoverNum) || turnoverNum > parseInt(filterTurnover)) {
       return false;

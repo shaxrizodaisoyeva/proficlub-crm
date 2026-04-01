@@ -8,6 +8,17 @@ import {
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
+const getOrgColor = (org) => {
+  if (!org) return '#94a3b8'; 
+  const colors = {
+    'PPS': '#10b981',      // Яшил
+    'Grand': '#8b5cf6',    // Бинафша
+    'Asklepiy': '#f59e0b', // Тўқ сариқ
+    '2': '#ef4444',        // Қизил
+  };
+  return colors[org] || `hsl(${org.length * 50 % 360}, 70%, 45%)`;
+};
+
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
@@ -76,6 +87,17 @@ const ROLE_FIELDS = {
     { key:'currentPosition', label:'Ҳозирги лавозим',            type:'text' },
   ],
 }
+
+const getOrgColor = (org) => {
+  if (!org) return '#94a3b8'; 
+  const colors = {
+    'PPS': '#10b981',
+    'Grand': '#8b5cf6',
+    'Asklepiy': '#f59e0b',
+    '2': '#ef4444',
+  };
+  return colors[org] || `hsl(${org.length * 50 % 360}, 70%, 45%)`;
+};
 
 const scoreColor = s => !s && s !== 0 ? '#aaa' : s >= 85 ? '#2E7D32' : s >= 60 ? '#F57C00' : '#C62828'
 const scoreBg    = s => !s && s !== 0 ? '#f0f0f0' : s >= 85 ? '#E8F5E9' : s >= 60 ? '#FFF8E1' : '#FFEBEE'
@@ -1059,11 +1081,32 @@ export default function App() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
             {loading ? <Spinner /> : filtered.map(emp=>(
-              <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?'#EEF4FF':'transparent', borderLeft:selected===emp.id?'3px solid #1976D2':'3px solid transparent' }}>
+              <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} 
+                style={{ 
+                  display:'flex', 
+                  alignItems:'center', 
+                  gap:9, 
+                  padding:'9px 12px', 
+                  cursor:'pointer', 
+                  background:selected===emp.id?'#EEF4FF':'transparent', 
+                  borderLeft: `4px solid ${getOrgColor(emp.organization)}`,
+                  transition: '0.2s'
+                }}>
                 <Avatar name={emp.name} size={34} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                    <span style={{ 
+                      fontSize: 9, 
+                      fontWeight: 800, 
+                      color: getOrgColor(emp.organization),
+                      background: `${getOrgColor(emp.organization)}15`,
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      textTransform: 'uppercase'
+                    }}>
+                      {emp.organization || 'Т/Й'}
+                    </span>
                     <Badge role={emp.role} />
                     {emp.isStar && <span style={{ fontSize:11 }}>⭐</span>}
                   </div>

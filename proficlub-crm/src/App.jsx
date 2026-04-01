@@ -1000,7 +1000,7 @@ export default function App() {
           <div style={{ padding:'10px 12px 6px' }}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Қидириш..." style={{ ...SI, marginBottom:8 }} />
             <button onClick={()=>setShowFilter(p=>!p)} style={{ ...BTN(showFilter?'#1976D2':'#F0F4FF', showFilter?'#fff':'#1565C0'), width:'100%', marginBottom:8, fontSize:12, border:'1.5px solid #BBDEFB' }}>
-              🔽 Кенгайтирилган филтер {showFilter ? '▲' : '▼'}
+              🔽 Кенгайтирилган филтр {showFilter ? '▲' : '▼'}
             </button>
             {showFilter && (
               <div style={{ background:'#F8F9FA', borderRadius:10, padding:10, marginBottom:8 }}>
@@ -1043,11 +1043,11 @@ export default function App() {
                 <label style={LBL}>Жамоадаги ходимлар сони (мин)</label>
                 <input type="number" value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
 
-                <label style={LBL}>Ходимлар алмашуви (% макс)</label>
+                <label style={LBL}>Ходимлар алмашуви (макс)</label>
                 <input type="number" value={filterTurnover} onChange={e=>setFilterTurnover(e.target.value)} placeholder="%" style={{ ...SI, marginBottom:8 }} />
                 <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax(''); setFilterHireDate(''); setFilterTeamSize(''); setFilterTurnover('') }}
                   style={{ ...BTN('#FFEBEE','#C62828'), width:'100%', fontSize:12, border:'1.5px solid #FFCDD2' }}>
-                  🗑️ Филтерни тозалаш
+                  🗑️ Филтрни тозалаш
                 </button>
               </div>
             )}

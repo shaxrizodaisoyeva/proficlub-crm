@@ -7,7 +7,19 @@ import {
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
 } from './lib/db'
 import { supabase } from './lib/supabase'
- 
+
+const getOrgColor = (org) => {
+  if (!org) return '#94A3B8'; // Ташкилот бўлмаса кулранг
+  
+  const name = org.toString().toUpperCase().trim(); // Ҳаммасини катта ҳарфга ўтказамиз
+  
+  if (name.includes('PPS')) return '#1565C0';   // Кўк
+  if (name.includes('GRAND')) return '#059669'; // Яшил
+  if (name.includes('PROFI')) return '#D97706'; // Тўқ сариқ
+  
+  return '#6366F1'; // Бошқалари учун бинафшаранг
+};
+
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
@@ -19,7 +31,6 @@ const ROLE_COLORS = {
 }
 const ROLE_FIELDS = {
   'Менежер': [
-    { key:'organization',  label:'Ташкилот',                      type:'text' },
     { key:'birthDate',     label:'Туғилган санаси',               type:'date' },
     { key:'educationLevel',label:'Маълумоти',                     type:'text' },
     { key:'education',     label:'Таълим муассасаси',             type:'text' },
@@ -28,12 +39,11 @@ const ROLE_FIELDS = {
     { key:'hireDate',      label:'Иш бошлаган сана',              type:'date' },
     { key:'sales6Month',   label:'Охирги 6 ой савдо (сўм)',       type:'text' },
     { key:'planPercent',   label:'Савдо режаси (%)',              type:'text' },
-    { key:'promoList',     label:'Промоция дорилар (Excel)',       type:'excel' },
+    { key:'promoList',     label:'Промоция дорилар рўйхати',      type:'promo' },
     { key:'teamSize',      label:'Жамоасидаги ходимлар сони',     type:'text' },
     { key:'staffTurnover', label:'Ходимлар алмашуви',             type:'text' },
   ],
   'МП': [
-    { key:'organization',  label:'Ташкилот',                      type:'text' },
     { key:'birthDate',     label:'Туғилган санаси',               type:'date' },
     { key:'educationLevel',label:'Маълумоти',                     type:'text' },
     { key:'education',     label:'Таълим муассасаси',             type:'text' },
@@ -78,26 +88,21 @@ const ROLE_FIELDS = {
     { key:'currentPosition', label:'Ҳозирги лавозим',            type:'text' },
   ],
 }
- 
-const FIRM_COLORS = {
-  'PPS':     { bg:'#E3F2FD', text:'#0D47A1', border:'#90CAF9', dot:'#1565C0' },
-  'IPS':     { bg:'#E8F5E9', text:'#1B5E20', border:'#A5D6A7', dot:'#2E7D32' },
-  'PPHS-II': { bg:'#FFF3E0', text:'#E65100', border:'#FFCC80', dot:'#F57C00' },
-}
- 
-function FirmBadge({ firm }) {
-  if (!firm) return null
-  const c = FIRM_COLORS[firm] || { bg:'#F5F5F5', text:'#555', border:'#E0E0E0', dot:'#999' }
-  return (
-    <span style={{ background:c.bg, color:c.text, border:`1.5px solid ${c.border}`, borderRadius:20, padding:'2px 10px', fontSize:10, fontWeight:800, display:'inline-flex', alignItems:'center', gap:4 }}>
-      <span style={{ width:5, height:5, borderRadius:'50%', background:c.dot }} />{firm}
-    </span>
-  )
-}
- 
+
+const getOrgColor = (org) => {
+  if (!org) return '#94a3b8'; 
+  const colors = {
+    'PPS': '#10b981',
+    'Grand': '#8b5cf6',
+    'Asklepiy': '#f59e0b',
+    '2': '#ef4444',
+  };
+  return colors[org] || `hsl(${org.length * 50 % 360}, 70%, 45%)`;
+};
+
 const scoreColor = s => !s && s !== 0 ? '#aaa' : s >= 85 ? '#2E7D32' : s >= 60 ? '#F57C00' : '#C62828'
 const scoreBg    = s => !s && s !== 0 ? '#f0f0f0' : s >= 85 ? '#E8F5E9' : s >= 60 ? '#FFF8E1' : '#FFEBEE'
- 
+
 function Badge({ role }) {
   const c = ROLE_COLORS[role] || { bg:'#f0f0f0', text:'#555', dot:'#999' }
   return (
@@ -140,12 +145,12 @@ function Toast({ msg, type = 'success' }) {
     </div>
   )
 }
- 
+
 const SI   = { width:'100%', padding:'8px 12px', border:'1.5px solid #E0E0E0', borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'#FAFAFA', boxSizing:'border-box' }
 const BTN  = (bg, color='#fff', extra={}) => ({ padding:'8px 16px', background:bg, color, border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13, ...extra })
 const CARD = { background:'#fff', borderRadius:14, padding:'18px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.06)', marginBottom:14 }
 const LBL  = { fontSize:11, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:0.5, marginBottom:5, display:'block' }
- 
+
 function DonutChart({ passed, failed }) {
   const total = passed + failed
   if (!total) return <div style={{ width:80, height:80, borderRadius:'50%', background:'#F0F0F0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#aaa' }}>—</div>
@@ -164,16 +169,17 @@ function DonutChart({ passed, failed }) {
     </div>
   )
 }
- 
+
 // ── PRAKTIKUM DASHBOARD ───────────────────────────────────────────────────────
 function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, showToast }) {
   const [addingEmp, setAddingEmp] = useState(false)
   const [empSearch, setEmpSearch] = useState('')
   const [editingP, setEditingP]   = useState(null) // participant being edited
- 
+
   const participants = prak.praktikum_participants || []
-  const starCount    = participants.filter(p => p.star).length
- 
+  const starEmployees = employees.filter(e => e.isStar)
+  const starCount = starEmployees.length
+
   async function handleAddParticipant(empId) {
     try {
       await addPraktikumParticipant(prak.id, empId)
@@ -181,7 +187,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
       showToast('Иштирокчи қўшилди')
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
   }
- 
+
   async function handleRemoveParticipant(id) {
     try {
       await removePraktikumParticipant(id)
@@ -189,7 +195,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
       showToast('Иштирокчи ўчирилди')
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
   }
- 
+
   async function handleUpdateParticipant(id, fields) {
     try {
       await updatePraktikumParticipant(id, fields)
@@ -198,7 +204,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
       showToast('Сақланди')
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
   }
- 
+
   async function handleUploadHomework(participantId, file) {
     if (!file) return
     try {
@@ -216,13 +222,13 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
       showToast(`${file.name} юкланди`)
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
   }
- 
+
   const alreadyIds = participants.map(p => p.employee_id)
   const availableEmps = employees.filter(e =>
     !alreadyIds.includes(e.id) &&
     e.name.toLowerCase().includes(empSearch.toLowerCase())
   )
- 
+
   return (
     <div>
       {/* Header */}
@@ -241,102 +247,76 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
           </div>
         </div>
       </div>
- 
+
       {/* Participants */}
-      {participants.length === 0 ? (
+      {starEmployees.length === 0 ? (
         <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
           <div style={{ fontSize:36, marginBottom:10 }}>⭐</div>
-          <div style={{ marginBottom:12 }}>Ҳали иштирокчи йўқ</div>
-          <button onClick={()=>setAddingEmp(true)} style={BTN('#F59E0B')}>+ Иштирокчи қўшиш</button>
+          <div>Ҳали практикум аъзолари йўқ</div>
+          <div style={{ fontSize:12, marginTop:8 }}>Ходим профилида ⭐ белгиланг</div>
         </div>
-      ) : participants.map(p => {
-        const emp = p.employees
-        if (!emp) return null
-        const isEditing = editingP?.id === p.id
+      ) : starEmployees.map(emp => {
+        const p = participants.find(x => x.employee_id === emp.id)
         return (
-          <div key={p.id} style={{ ...CARD, borderLeft:`4px solid ${p.star ? '#F59E0B' : '#E0E0E0'}` }}>
-            <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+          <div key={emp.id} style={{ ...CARD, borderLeft:'4px solid #F59E0B' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ position:'relative' }}>
                 <Avatar name={emp.name} size={40} />
-                {p.star && <span style={{ position:'absolute', top:-4, right:-4, fontSize:14 }}>⭐</span>}
+                <span style={{ position:'absolute', top:-4, right:-4, fontSize:14 }}>⭐</span>
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:6 }}>
-                  <span style={{ fontWeight:800, fontSize:14 }}>{emp.name}</span>
-                  <Badge role={emp.role} />
-                  {emp.organization && <FirmBadge firm={emp.organization} />}
-                  {p.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
-                </div>
- 
-                {/* Homework */}
-                {p.homework_url ? (
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                    <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name || 'Уй вазифаси'}</a>
-                    <span style={{ fontSize:11, color:'#888' }}>{p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : ''}</span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize:12, color:'#aaa', marginBottom:6 }}>📭 Уй вазифаси юборилмаган</div>
-                )}
- 
-                {/* Feedback */}
-                {p.feedback && !isEditing && (
-                  <div style={{ background:'#F8F9FA', borderRadius:8, padding:'7px 10px', fontSize:13, color:'#555', marginBottom:6 }}>
-                    💬 {p.feedback}
-                  </div>
-                )}
- 
-                {/* Edit form */}
-                {isEditing && (
-                  <div style={{ background:'#F8F9FA', borderRadius:10, padding:12, marginBottom:8 }}>
-                    <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
-                      <div style={{ flex:1 }}>
-                        <label style={LBL}>Балл (0–100)</label>
-                        <input type="number" min="0" max="100"
-                          defaultValue={editingP.grade ?? ''}
-                          onChange={e=>setEditingP(p=>({...p, grade: e.target.value ? Number(e.target.value) : null}))}
-                          style={{ ...SI }} />
-                      </div>
-                      <div style={{ flex:1 }}>
-                        <label style={LBL}>⭐ Ҳолати</label>
-                        <select
-                          defaultValue={editingP.star ? 'yes' : 'no'}
-                          onChange={e=>setEditingP(p=>({...p, star: e.target.value === 'yes'}))}
-                          style={{ ...SI }}>
-                          <option value="yes">⭐ Практикумда</option>
-                          <option value="no">Практикумдан чиқди</option>
-                        </select>
-                      </div>
-                    </div>
-                    <label style={LBL}>Изоҳ / Фидбек</label>
-                    <textarea
-                      defaultValue={editingP.feedback ?? ''}
-                      onChange={e=>setEditingP(p=>({...p, feedback: e.target.value}))}
-                      rows={2} style={{ ...SI, resize:'vertical', marginBottom:8 }} />
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button onClick={()=>handleUpdateParticipant(p.id, { grade:editingP.grade, star:editingP.star, feedback:editingP.feedback })}
-                        style={{ ...BTN('#388E3C'), flex:1 }}>✅ Сақлаш</button>
-                      <button onClick={()=>setEditingP(null)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
-                    </div>
-                  </div>
-                )}
+                <div style={{ fontWeight:800, fontSize:14 }}>{emp.name}</div>
+                <Badge role={emp.role} />
+                {p?.grade != null && <span style={{ marginLeft:8, background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 8px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
+                {p?.feedback && <div style={{ fontSize:12, color:'#555', marginTop:4 }}>💬 {p.feedback}</div>}
+                {p?.homework_url && <div style={{ marginTop:4 }}><a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700 }}>📎 {p.homework_name}</a></div>}
               </div>
- 
-              {/* Action buttons */}
-              {!isEditing && (
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <button onClick={()=>setEditingP({...p})} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'5px 10px', fontSize:12 }}>✏️</button>
-                  <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', padding:'5px 10px', fontSize:12, cursor:'pointer', textAlign:'center' }}>
-                    📎
-                    <input type="file" style={{ display:'none' }} onChange={e=>handleUploadHomework(p.id, e.target.files[0])} />
-                  </label>
-                  <button onClick={()=>handleRemoveParticipant(p.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2', padding:'5px 10px', fontSize:12 }}>🗑️</button>
-                </div>
-              )}
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <button onClick={()=>setEditingP(p ? {...p, employee_id: emp.id} : { employee_id: emp.id, grade: null, star: true, feedback: '', id: null })}
+                  style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'5px 10px', fontSize:12 }}>✏️</button>
+                <label style={{ ...BTN('#E8F5E9','#2E7D32'), border:'1.5px solid #A5D6A7', padding:'5px 10px', fontSize:12, cursor:'pointer', textAlign:'center' }}>
+                  📎
+                  <input type="file" style={{ display:'none' }} onChange={e=>{
+                    if(p) handleUploadHomework(p.id, e.target.files[0])
+                  }} />
+              </label>
             </div>
+          </div>
+          {editingP?.employee_id === emp.id && (
+            <div style={{ background:'#F8F9FA', borderRadius:10, padding:12, marginTop:10 }}>
+              <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                <div style={{ flex:1 }}>
+                  <label style={LBL}>Балл (0–100)</label>
+                  <input type="number" min="0" max="100" defaultValue={editingP.grade ?? ''}
+                    onChange={e=>setEditingP(x=>({...x, grade: e.target.value ? Number(e.target.value) : null}))}
+                    style={{ ...SI }} />
+                  </div>
+                </div>
+                <label style={LBL}>Изоҳ / Фидбек</label>
+                <textarea defaultValue={editingP.feedback ?? ''} onChange={e=>setEditingP(x=>({...x, feedback: e.target.value}))}
+                  rows={2} style={{ ...SI, resize:'vertical', marginBottom:8 }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={async ()=>{
+                    if (editingP.id) {
+                      await handleUpdateParticipant(editingP.id, { grade: editingP.grade, feedback: editingP.feedback })
+                    } else {
+                      await addPraktikumParticipant(prak.id, editingP.employee_id)
+                      const praks = await fetchPraktikum()
+                      const updated = praks.find(x=>x.id===prak.id)
+                      const newP = (updated?.praktikum_participants||[]).find(x=>x.employee_id===editingP.employee_id)
+                      if (newP) await handleUpdateParticipant(newP.id, { grade: editingP.grade, feedback: editingP.feedback })
+                      await onRefresh()
+                    }
+                    setEditingP(null)
+                  }} style={{ ...BTN('#388E3C'), flex:1 }}>✅ Сақлаш</button>
+                  <button onClick={()=>setEditingP(null)} style={{ ...BTN('#F5F7FA','#555'), flex:1, border:'1.5px solid #ddd' }}>Бекор</button>
+                </div>
+              </div>
+            )}
           </div>
         )
       })}
- 
+
       {/* Add participant modal */}
       {addingEmp && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
@@ -367,7 +347,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
     </div>
   )
 }
- 
+
 function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial, onEditTraining }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
@@ -378,7 +358,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   const [editingSession, setEditingSession] = useState(null)
   const [newSession, setNewSession] = useState({ city:'', date:'', trainer:'', selectedEmps:[] })
   const [empSearch, setEmpSearch] = useState('')
- 
+
   useEffect(() => {
     async function load() {
       setLoadingSessions(true)
@@ -390,14 +370,14 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
     }
     load()
   }, [training.id])
- 
+
   async function handleDeleteSession(id) {
     try {
       await deleteSession(id)
       setSessions(p => p.filter(s => s.id !== id))
     } catch(e) { console.error(e) }
   }
- 
+
   async function handleSaveSession() {
     try {
       let sessionId
@@ -417,7 +397,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       setEmpSearch('')
     } catch(e) { console.error(e) }
   }
- 
+
   const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
   const withResult = results.filter(x=>x.res)
   const scores     = withResult.map(x=>x.res.totalScore)
@@ -430,7 +410,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   const byRole     = ROLES.map(role=>{ const rs=withResult.filter(x=>x.emp.role===role).map(x=>x.res.totalScore); return {role,count:rs.length,avg:rs.length?Math.round(rs.reduce((a,b)=>a+b,0)/rs.length):null} }).filter(r=>r.count>0)
   const bandCounts = [[90,100,'#2E7D32'],[80,89,'#66BB6A'],[70,79,'#FFA726'],[60,69,'#EF5350'],[0,59,'#B71C1C']].map(([min,max,color])=>({ label:`${min}–${max}`, min, max, color, count:scores.filter(s=>s>=min&&s<=max).length }))
   const maxBand    = Math.max(...bandCounts.map(b=>b.count),1)
- 
+
   const KPI = ({ icon, label, value, sub, color='#1A1A2E' }) => (
     <div style={{ background:'#fff', borderRadius:12, padding:'14px 18px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', flex:1, minWidth:110 }}>
       <div style={{ fontSize:20, marginBottom:4 }}>{icon}</div>
@@ -439,7 +419,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       {sub && <div style={{ fontSize:11, color:'#aaa', marginTop:3 }}>{sub}</div>}
     </div>
   )
- 
+
   return (
     <div>
       <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
@@ -460,7 +440,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           </div>
         </div>
       </div>
- 
+
       {(training.materials||[]).length > 0 && (
         <div style={{ ...CARD, marginBottom:14 }}>
           <div style={{ fontWeight:800, fontSize:14, marginBottom:10 }}>📎 Юкланган материаллар</div>
@@ -482,13 +462,13 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           ))}
         </div>
       )}
- 
+
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
         {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар']].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:tab===t?'#1976D2':'#fff', color:tab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
         ))}
       </div>
- 
+
       {tab==='overview' && (withResult.length===0
         ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:50 }}><div style={{ fontSize:36, marginBottom:10 }}>📭</div><div style={{ marginBottom:12 }}>Ҳали натижа киритилмаган</div><button onClick={()=>onBulkEntry(training)} style={BTN('#1976D2')}>⚡ Натижаларни киритиш</button></div>
         : <>
@@ -549,7 +529,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
             </div>
           </>
       )}
- 
+
       {tab==='sessions' && (
         <div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
@@ -629,7 +609,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           )}
         </div>
       )}
- 
+
       {tab==='results' && (
         <div>
           <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10, gap:8, alignItems:'center' }}>
@@ -661,7 +641,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           </div>
         </div>
       )}
- 
+
       {tab==='answers' && (
         <div>
           {(training.questions||[]).length===0
@@ -689,12 +669,12 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
     </div>
   )
 }
- 
+
 function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) {
   const [scores, setScores] = useState({})
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
- 
+
   useEffect(()=>{
     const init = {}
     employees.forEach(e=>{
@@ -703,12 +683,12 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     })
     setScores(init)
   },[training.id, employees])
- 
+
   const filledCount = Object.keys(scores).filter(id=>scores[id]?.mcScore!==''&&scores[id]?.mcScore!=null).length
   const sessionEmpIds = session?.session_participants?.map(p => p.employee_id) || null
   const allEmps = sessionEmpIds ? employees.filter(e => sessionEmpIds.includes(e.id)) : employees
   const filtered = allEmps.filter(e=>e.name.toLowerCase().includes(search.toLowerCase()))
- 
+
   async function handleSave() {
     setSaving(true)
     try {
@@ -721,7 +701,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     } catch(e) { onToast('Хатолик: ' + e.message, 'error') }
     finally { setSaving(false) }
   }
- 
+
   return (
     <div style={{ maxWidth:900 }}>
       <div style={{ ...CARD, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
@@ -791,7 +771,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     </div>
   )
 }
- 
+
 export default function App() {
   const [employees, setEmployees] = useState([])
   const [trainings, setTrainings] = useState([])
@@ -812,6 +792,18 @@ export default function App() {
   const [selTraining, setSelTraining] = useState(null)
   const [bulkMode, setBulkMode]   = useState(false)
   const [selSession, setSelSession] = useState(null)
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterFirm, setFilterFirm] = useState('')
+  const [filterEduLevel, setFilterEduLevel] = useState('')
+  const [filterSpecialty, setFilterSpecialty] = useState('')
+  const [filterRegion, setFilterRegion] = useState('')
+  const [filterSalesMin, setFilterSalesMin] = useState('')
+  const [filterSalesMax, setFilterSalesMax] = useState('')
+  const [filterPlanMin, setFilterPlanMin] = useState('')
+  const [filterPlanMax, setFilterPlanMax] = useState('')
+  const [filterHireDate, setFilterHireDate] = useState('')
+  const [filterTeamSize, setFilterTeamSize] = useState('')
+  const [filterTurnover, setFilterTurnover] = useState('')
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
@@ -820,12 +812,12 @@ export default function App() {
   const [addingPrak, setAddingPrak] = useState(false)
   const [editingPrak, setEditingPrak] = useState(null)
   const [newPrak, setNewPrak]     = useState({ title:'', date:'', description:'' })
- 
+
   const showToast = useCallback((msg, type='success') => {
     setToast({ msg, type })
     setTimeout(()=>setToast(null), 3000)
   }, [])
- 
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -836,16 +828,55 @@ export default function App() {
     } catch(e) { showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error') }
     finally { setLoading(false) }
   }, [showToast])
- 
+
   useEffect(()=>{ load() }, [load])
- 
-  const filtered = useMemo(()=>employees.filter(e=>
-    e.name.toLowerCase().includes(search.toLowerCase()) &&
-    (filterRole==='Барчаси' || e.role===filterRole)
-  ), [employees, search, filterRole])
- 
+
+  const filtered = useMemo(()=>employees.filter(e=>{
+  if (!e.name.toLowerCase().includes(search.toLowerCase())) return false
+  if (filterRole !== 'Барчаси' && e.role !== filterRole) return false
+  if (filterFirm && e.organization !== filterFirm) return false
+  if (filterEduLevel && e.educationLevel !== filterEduLevel) return false
+  if (filterSpecialty && !e.specialty?.toLowerCase().includes(filterSpecialty.toLowerCase())) return false
+  if (filterRegion && e.region !== filterRegion) return false
+  if (filterSalesMin) {
+    const sales = parseInt((e.sales6Month||'').replace(/\s/g,''))
+    if (isNaN(sales) || sales < parseInt(filterSalesMin)) return false
+  }
+  if (filterSalesMax) {
+    const sales = parseInt((e.sales6Month||'').replace(/\s/g,''))
+    if (isNaN(sales) || sales > parseInt(filterSalesMax)) return false
+  }
+  if (filterPlanMin) {
+    const plan = parseInt((e.planPercent||'').replace('%',''))
+    if (isNaN(plan) || plan < parseInt(filterPlanMin)) return false
+  }
+  if (filterPlanMax) {
+    const plan = parseInt((e.planPercent||'').replace('%',''))
+    if (isNaN(plan) || plan > parseInt(filterPlanMax)) return false
+  }
+  if (filterHireDate) {
+    const year = e.hireDate ? e.hireDate.toString().substring(0, 4) : '';
+    if (year !== filterHireDate) return false;
+  }
+  if (filterTeamSize) {
+    const tSize = parseInt(e.teamSize || 0)
+    if (isNaN(tSize) || tSize < parseInt(filterTeamSize)) return false
+  }
+  if (filterTurnover) {
+    if (!e.staffTurnover && e.staffTurnover !== 0) {
+      return false;
+    }
+    const rawValue = String(e.staffTurnover).replace(/\s/g, '');
+    const turnoverNum = parseInt(rawValue);
+    if (isNaN(turnoverNum) || turnoverNum > parseInt(filterTurnover)) {
+      return false;
+    }
+  }
+  return true
+}), [employees, search, filterRole, filterFirm, filterEduLevel, filterSpecialty, filterRegion, filterSalesMin, filterSalesMax, filterPlanMin, filterPlanMax, filterPlanMax, filterHireDate, filterTeamSize, filterTurnover])
+
   const selEmp = selected ? employees.find(e=>e.id===selected) : null
- 
+
   async function handleAddEmp() {
     if (!newEmp.name.trim()) return
     setSaving(true)
@@ -858,7 +889,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleSaveEdit() {
     setSaving(true)
     try {
@@ -869,7 +900,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleDelete(id) {
     setSaving(true)
     try {
@@ -880,7 +911,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleAddTraining() {
     if (!newTr.title.trim()) return
     setSaving(true)
@@ -904,7 +935,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleDeleteTraining(id) {
     setSaving(true)
     try {
@@ -915,7 +946,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleUploadMaterial(training, file) {
     if (!file) return
     setSaving(true)
@@ -934,7 +965,7 @@ export default function App() {
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
     finally { setSaving(false) }
   }
- 
+
   // Praktikum handlers
   async function handleSavePrak() {
     if (!newPrak.title.trim()) return
@@ -954,7 +985,7 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   async function handleDeletePrak(id) {
     setSaving(true)
     try {
@@ -965,28 +996,21 @@ export default function App() {
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
- 
+
   function handleBulkSaved() { setBulkMode(false); load() }
   function goToEmployee(id) { setSelected(id); setEmpTab('exams'); setPage('employees'); setBulkMode(false) }
   const navBtn = active => ({ padding:'8px 14px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13 })
- 
+
   return (
     <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
       {/* SIDEBAR */}
-      <div style={{ width:272, minWidth:272, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
+      <div style={{ width:272, minWidth:272, height: '100vh', background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column', overflow: 'hidden' }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>
-            <div>
-              <div style={{ fontWeight:800, fontSize:14 }}>ПрофиКлуб CRM</div>
-              <div style={{ fontSize:10, color:'#888', display:'flex', gap:6, flexWrap:'wrap', marginTop:2 }}>
-                {['PPS','IPS','PPHS-II'].map(f=>{
-                  const cnt = employees.filter(e=>e.organization===f).length
-                  if (!cnt) return null
-                  return <span key={f} style={{ background:FIRM_COLORS[f]?.bg, color:FIRM_COLORS[f]?.text, borderRadius:10, padding:'1px 6px', fontWeight:700, fontSize:10 }}>{f}: {cnt}</span>
-                })}
-              </div>
-            </div>
+            <div><div style={{ fontWeight:800, fontSize:14 }}>ПрофиКлуб CRM</div><div style={{ fontSize:10, color:'#888' }}>
+                                                                                   {filtered.length !== employees.length ? `${filtered.length} / ${employees.length} та` : `${employees.length} та`}
+                                                                                  </div></div>
           </div>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             <button style={navBtn(page==='employees')} onClick={()=>{ setPage('employees'); setBulkMode(false) }}>👥 Ходимлар</button>
@@ -994,36 +1018,112 @@ export default function App() {
             <button style={navBtn(page==='praktikum')} onClick={()=>{ setPage('praktikum'); setBulkMode(false) }}>⭐ Практикум</button>
           </div>
         </div>
- 
+
         {page==='employees' && <>
           <div style={{ padding:'10px 12px 6px' }}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Қидириш..." style={{ ...SI, marginBottom:8 }} />
+            <button onClick={()=>setShowFilter(p=>!p)} style={{ ...BTN(showFilter?'#1976D2':'#F0F4FF', showFilter?'#fff':'#1565C0'), width:'100%', marginBottom:8, fontSize:12, border:'1.5px solid #BBDEFB' }}>
+              🔽 Кенгайтирилган филтр {showFilter ? '▲' : '▼'}
+            </button>
+            {showFilter && (
+              <div style={{ background:'#F8F9FA', borderRadius:10, padding:10, marginBottom:8, maxHeight: 280, overflowY: 'auto', border: '1px solid #eee', flexShrink: 0 }}>
+                <label style={LBL}>Ташкилот</label>
+                <select value={filterFirm} onChange={e=>setFilterFirm(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {[...new Set(employees.map(e=>e.organization).filter(Boolean))].sort().map(f=>(
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <label style={LBL}>Маълумоти</label>
+                <select value={filterEduLevel} onChange={e=>setFilterEduLevel(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {['Олий','Ўрта махсус','Ўрта','Тугалланмаган олий'].map(v=>(
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+                <label style={LBL}>Мутахассислик</label>
+                <input value={filterSpecialty} onChange={e=>setFilterSpecialty(e.target.value)} placeholder="Фармацевт..." style={{ ...SI, marginBottom:8 }} />
+                <label style={LBL}>Ҳудуд</label>
+                <select value={filterRegion} onChange={e=>setFilterRegion(e.target.value)} style={{ ...SI, marginBottom:8 }}>
+                  <option value=''>Барчаси</option>
+                  {[...new Set(employees.map(e=>e.region).filter(Boolean))].sort().map(r=>(
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <label style={LBL}>6 ой савдо (сўм)</label>
+                <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+                  <input value={filterSalesMin} onChange={e=>setFilterSalesMin(e.target.value)} placeholder="дан (мин)" style={{ ...SI, flex:1 }} />
+                  <input value={filterSalesMax} onChange={e=>setFilterSalesMax(e.target.value)} placeholder="гача (макс)" style={{ ...SI, flex:1 }} />
+                </div>
+                <label style={LBL}>Режа (%)</label>
+                <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+                  <input value={filterPlanMin} onChange={e=>setFilterPlanMin(e.target.value)} placeholder="дан" style={{ ...SI, flex:1 }} />
+                  <input value={filterPlanMax} onChange={e=>setFilterPlanMax(e.target.value)} placeholder="гача" style={{ ...SI, flex:1 }} />
+                </div>
+                <label style={LBL}>Иш бошлаган сана (дан)</label>
+                <input type="number" value={filterHireDate} onChange={e=>setFilterHireDate(e.target.value)} style={{ ...SI, marginBottom:8 }} />
+
+                <label style={LBL}>Жамоадаги ходимлар сони (мин)</label>
+                <input type="number" value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
+
+                <label style={LBL}>Ходимлар алмашуви (макс)</label>
+                <input type="number" value={filterTurnover} onChange={e=>setFilterTurnover(e.target.value)} placeholder="0" style={{ ...SI, marginBottom:8 }} />
+                <button onClick={()=>{ setFilterFirm(''); setFilterEduLevel(''); setFilterSpecialty(''); setFilterRegion(''); setFilterSalesMin(''); setFilterSalesMax(''); setFilterPlanMin(''); setFilterPlanMax(''); setFilterHireDate(''); setFilterTeamSize(''); setFilterTurnover('') }}
+                  style={{ ...BTN('#FFEBEE','#C62828'), width:'100%', fontSize:12, border:'1.5px solid #FFCDD2' }}>
+                  🗑️ Филтрни тозалаш
+                </button>
+              </div>
+            )}
             <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
               {['Барчаси',...ROLES].map(r=>(
                 <button key={r} onClick={()=>setFilterRole(r)} style={{ padding:'3px 8px', borderRadius:20, border:'1.5px solid', fontSize:10, fontWeight:700, cursor:'pointer', borderColor:filterRole===r?'#1976D2':'#E0E0E0', background:filterRole===r?'#1976D2':'#fff', color:filterRole===r?'#fff':'#666' }}>{r}</button>
               ))}
             </div>
           </div>
-          <div style={{ flex:1, overflowY:'auto' }}>
-            {loading ? <Spinner /> : filtered.map(emp=>(
-              <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?(FIRM_COLORS[emp.organization]?.bg||'#EEF4FF'):'transparent', borderLeft:`3px solid ${selected===emp.id?(FIRM_COLORS[emp.organization]?.dot||'#1976D2'):'transparent'}` }}>
+          <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
+            {loading ? <Spinner /> : filtered.map(emp => {
+              const orgName = emp.organization || '';
+              console.log("Ходим:", emp.name, "Ташкилот:", emp.organization);
+              return (
+              <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} 
+                style={{ 
+                  display:'flex', 
+                  alignItems:'center', 
+                  gap:9, 
+                  padding:'9px 12px', 
+                  cursor:'pointer', 
+                  background:selected===emp.id?'#EEF4FF':'transparent', 
+                  borderLeft: `4px solid ${getOrgColor(orgName)}`,
+                  transition: '0.2s'
+                }}>
                 <Avatar name={emp.name} size={34} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                    <span style={{ 
+                      fontSize: 9, 
+                      fontWeight: 800, 
+                      color: getOrgColor(orgName),
+                      background: `${getOrgColor(orgName)}15`,
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      textTransform: 'uppercase'
+                    }}>
+                      {orgName || 'Т/Й'}
+                    </span>
                     <Badge role={emp.role} />
-                    {emp.organization && <FirmBadge firm={emp.organization} />}
                     {emp.isStar && <span style={{ fontSize:11 }}>⭐</span>}
                   </div>
                 </div>
-              </div>
-            ))}
+               </div>
+              );
+            })}
           </div>
-          <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB' }}>
+          <div style={{ padding:12, borderTop:'1.5px solid #EBEBEB', flexShrink: 0 }}>
             <button onClick={()=>{ setAdding(true); setSelected(null) }} style={{ ...BTN('linear-gradient(135deg,#1565C0,#42A5F5)'), width:'100%', padding:'10px' }}>+ Янги ходим</button>
           </div>
         </>}
- 
+
         {page==='exams' && <>
           <div style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
             <div style={{ padding:'8px 14px 4px', fontSize:10, fontWeight:700, color:'#bbb', textTransform:'uppercase' }}>Тренинглар</div>
@@ -1041,7 +1141,7 @@ export default function App() {
             <button onClick={()=>{ setEditingTraining(null); setNewTr({ title:'', date:'', questions:[''] }); setAddingTr(true) }} style={{ ...BTN('#F0F4FF','#1565C0'), width:'100%', padding:'10px' }}>+ Янги тренинг</button>
           </div>
         </>}
- 
+
         {page==='praktikum' && <>
           <div style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
             <div style={{ padding:'8px 14px 4px', fontSize:10, fontWeight:700, color:'#bbb', textTransform:'uppercase' }}>Практикумлар</div>
@@ -1060,10 +1160,10 @@ export default function App() {
           </div>
         </>}
       </div>
- 
+
       {/* MAIN CONTENT */}
       <div style={{ flex:1, overflowY:'auto', padding:22 }}>
- 
+
         {/* Add employee */}
         {adding && (
           <div style={{ maxWidth:440, ...CARD }}>
@@ -1080,7 +1180,7 @@ export default function App() {
             </div>
           </div>
         )}
- 
+
         {/* Employee detail */}
         {page==='employees' && selEmp && !adding && (()=>{
           const fields = ROLE_FIELDS[selEmp.role] || []
@@ -1095,7 +1195,6 @@ export default function App() {
                   }
                   <div style={{ marginTop:5, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                     <Badge role={selEmp.role} />
-                    {selEmp.organization && <FirmBadge firm={selEmp.organization} />}
                     {selEmp.hireDate && <span style={{ fontSize:11, color:'#888' }}>Иш бошлаган: {selEmp.hireDate}</span>}
                     <span style={{ fontSize:11, color:'#888' }}>{selEmp.examResults?.length||0} та имтиҳон</span>
                     {praktikums.some(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id&&p.star)) && <span style={{ fontSize:13 }}>⭐</span>}
@@ -1103,12 +1202,21 @@ export default function App() {
                 </div>
                 <div style={{ display:'flex', gap:7 }}>
                   {!editing
-                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button><button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
+                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button>
+                      <button onClick={async ()=>{
+                        const newStar = !selEmp.isStar
+                        await updateEmployee(selEmp.id, { ...selEmp, isStar: newStar })
+                        setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,isStar:newStar}:e))
+                        showToast(newStar ? '⭐ Практикум аъзоси белгиланди' : 'Практикум аъзолигидан чиқарилди')
+                      }} style={{ ...BTN(selEmp.isStar?'#FEF3C7':'#F5F7FA', selEmp.isStar?'#92400E':'#888'), border:`1.5px solid ${selEmp.isStar?'#FDE68A':'#E0E0E0'}` }}>
+                        {selEmp.isStar ? '⭐ Практикумда' : '☆ Практикумга қўшиш'}
+                      </button>
+                      <button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
                     : <><button onClick={handleSaveEdit} disabled={saving} style={BTN('#388E3C')}>{saving?'Сақланяпти...':'✅ Сақлаш'}</button><button onClick={()=>setEditing(false)} style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>❌ Бекор</button></>
                   }
                 </div>
               </div>
- 
+
               {delConfirm && (
                 <div style={{ background:'#FFF8F8', border:'1.5px solid #FFCDD2', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                   <span style={{ fontWeight:600, color:'#C62828', fontSize:13 }}>⚠️ {selEmp.name}ни ўчиришни тасдиқлайсизми?</span>
@@ -1116,58 +1224,30 @@ export default function App() {
                   <button onClick={()=>setDelConfirm(null)} style={{ ...BTN('#fff','#555'), border:'1.5px solid #ddd' }}>Бекор</button>
                 </div>
               )}
- 
+
               <div style={{ display:'flex', gap:6, marginBottom:14 }}>
                 {[['info','📋 Маълумотлар'],[`exams`,`📊 Имтиҳонлар (${selEmp.examResults?.length||0})`]].map(([t,l])=>(
                   <button key={t} onClick={()=>setEmpTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:empTab===t?'#1976D2':'#fff', color:empTab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
                 ))}
               </div>
- 
+
               {empTab==='info' && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
                   {fields.map(f=>{
                     const val = editing ? editData[f.key] : selEmp[f.key]
                     if (!editing && !val) return null
                     return (
-                      <div key={f.key} style={{ ...CARD, gridColumn:(f.type==='textarea'||f.type==='promo'||f.type==='excel')?'1/-1':'auto', marginBottom:0 }}>
+                      <div key={f.key} style={{ ...CARD, gridColumn:(f.type==='textarea'||f.type==='promo')?'1/-1':'auto', marginBottom:0 }}>
                         <label style={LBL}>{f.label}</label>
                         {editing
-                          ? f.type==='textarea'
+                          ? (f.type==='textarea'||f.type==='promo')
                             ? <textarea value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} rows={3} style={{ ...SI, resize:'vertical' }} />
-                            : f.type==='excel'
-                            ? <div style={{ fontSize:12, color:'#888' }}>Таҳрирлаш режимида файлни алмаштириш учун Бекорни босиб, тўғридан юкланг</div>
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
                           : f.key==='promoList'
-                            ? <div>
-                                {val && val.startsWith('http')
-                                  ? <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                      <a href={val} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
-                                        📊 Excel файлни кўриш
-                                      </a>
-                                      {!editing && <button onClick={async ()=>{
-                                        await updateEmployee(selEmp.id, { ...selEmp, promoList: '' })
-                                        setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,promoList:''}:e))
-                                        showToast('Файл ўчирилди')
-                                      }} style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Ўчириш</button>}
-                                    </div>
-                                  : <div style={{ color:'#aaa', fontSize:13 }}>📭 Файл юкланмаган</div>
-                                }
-                                {!editing && <label style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB', marginTop:8 }}>
-                                  📎 Excel юклаш
-                                  <input type="file" accept=".xlsx,.xls,.csv" style={{ display:'none' }} onChange={async e=>{
-                                    const file = e.target.files[0]
-                                    if (!file) return
-                                    try {
-                                      const path = `promo/${selEmp.id}/${Date.now()}_${file.name}`
-                                      const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
-                                      if (upErr) throw upErr
-                                      const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
-                                      await updateEmployee(selEmp.id, { ...selEmp, promoList: publicUrl })
-                                      setEmployees(p=>p.map(emp=>emp.id===selEmp.id?{...emp,promoList:publicUrl}:emp))
-                                      showToast(`${file.name} юкланди`)
-                                    } catch(err) { showToast('Хатолик: ' + err.message, 'error') }
-                                  }} />
-                                </label>}
+                            ? <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:2 }}>
+                                {val.split('\n').filter(Boolean).map((d,i) => (
+                                  <span key={i} style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:13, fontWeight:600 }}>{d}</span>
+                                ))}
                               </div>
                             : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
                         }
@@ -1176,7 +1256,7 @@ export default function App() {
                   })}
                 </div>
               )}
- 
+
               {empTab==='exams' && (
                 <div>
                   {!selEmp.examResults?.length && (
@@ -1217,7 +1297,7 @@ export default function App() {
             </div>
           )
         })()}
- 
+
         {page==='employees' && !selEmp && !adding && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80%', color:'#ccc' }}>
             <div style={{ fontSize:48, marginBottom:10 }}>👈</div>
@@ -1225,7 +1305,7 @@ export default function App() {
             <div style={{ fontSize:13, marginTop:4 }}>Жами {employees.length} та ходим</div>
           </div>
         )}
- 
+
         {/* TRAININGS PAGE */}
         {page==='exams' && !bulkMode && (
           <div>
@@ -1250,7 +1330,7 @@ export default function App() {
                 </div>
               </div>
             )}
- 
+
             {selTraining
               ? <TrainingDashboard
                   training={trainings.find(t=>t.id===selTraining?.id)||selTraining}
@@ -1289,7 +1369,7 @@ export default function App() {
             }
           </div>
         )}
- 
+
         {page==='exams' && bulkMode && selTraining && (
           <BulkEntry
             training={selTraining}
@@ -1300,7 +1380,7 @@ export default function App() {
             onToast={showToast}
           />
         )}
- 
+
         {/* PRAKTIKUM PAGE */}
         {page==='praktikum' && (
           <div>
@@ -1319,7 +1399,7 @@ export default function App() {
                 </div>
               </div>
             )}
- 
+
             {selPrak
               ? <PraktikumDashboard
                   prak={praktikums.find(p=>p.id===selPrak.id)||selPrak}
@@ -1355,9 +1435,8 @@ export default function App() {
           </div>
         )}
       </div>
- 
+
       {toast && <Toast msg={toast.msg} type={toast.type} />}
     </div>
   )
 }
- 

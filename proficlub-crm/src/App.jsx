@@ -9,14 +9,15 @@ import {
 import { supabase } from './lib/supabase'
 
 const getOrgColor = (org) => {
-  if (!org) return '#94a3b8'; 
-  const colors = {
-    'PPS': '#10b981',      // Яшил
-    'Grand': '#8b5cf6',    // Бинафша
-    'Asklepiy': '#f59e0b', // Тўқ сариқ
-    '2': '#ef4444',        // Қизил
-  };
-  return colors[org] || `hsl(${org.length * 50 % 360}, 70%, 45%)`;
+  if (!org) return '#94A3B8'; // Ташкилот бўлмаса кулранг
+  
+  const name = org.toString().toUpperCase().trim(); // Ҳаммасини катта ҳарфга ўтказамиз
+  
+  if (name.includes('PPS')) return '#1565C0';   // Кўк
+  if (name.includes('GRAND')) return '#059669'; // Яшил
+  if (name.includes('PROFI')) return '#D97706'; // Тўқ сариқ
+  
+  return '#6366F1'; // Бошқалари учун бинафшаранг
 };
 
 const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
@@ -1081,7 +1082,7 @@ export default function App() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
             {loading ? <Spinner /> : filtered.map(emp => {
-              const orgName = emp.organization || emp.data?.organization || '';
+              const orgName = emp.organization || '';
               return (
               <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} 
                 style={{ 

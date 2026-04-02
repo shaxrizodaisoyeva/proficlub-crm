@@ -1243,36 +1243,36 @@ export default function App() {
                             : <input type={f.type==='date'?'date':f.type==='number'?'number':'text'} value={editData[f.key]||''} onChange={e=>setEditData(p=>({...p,[f.key]:e.target.value}))} style={SI} />
                           : f.key==='promoList'
                             ? <div>
-                                {val && val.startsWith('http')
-                                  ? <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                      <a href={val} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
-                                        📊 Excel файлни кўриш
-                                      </a>
-                                      {!editing && <button onClick={async ()=>{
-                                        await updateEmployee(selEmp.id, { ...selEmp, promoList: '' })
-                                        setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,promoList:''}:e))
-                                        showToast('Файл ўчирилди')
-                                      }} style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Ўчириш</button>}
-                                    </div>
-                                  : <div style={{ color:'#aaa', fontSize:13 }}>📭 Файл юкланмаган</div>
-                                }
-                                {!editing && <label style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB', marginTop:8 }}>
-                                  📎 Excel юклаш
-                                  <input type="file" accept=".xlsx,.xls,.csv" style={{ display:'none' }} onChange={async e=>{
-                                    const file = e.target.files[0]
-                                    if (!file) return
-                                    try {
-                                      const path = `promo/${selEmp.id}/${Date.now()}_${file.name}`
-                                      const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
-                                      if (upErr) throw upErr
-                                      const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
-                                      await updateEmployee(selEmp.id, { ...selEmp, promoList: publicUrl })
-                                      setEmployees(p=>p.map(emp=>emp.id===selEmp.id?{...emp,promoList:publicUrl}:emp))
-                                      showToast(`${file.name} юкланди`)
-                                    } catch(err) { showToast('Хатолик: ' + err.message, 'error') }
-                                  }} />
-                                </label>}
-                              </div>
+                              {val && val.startsWith('http')
+                                ? <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                                  <a href={val} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
+                                    📊 Excel файлни кўриш
+                                  </a>
+                                  <button onClick={async ()=>{
+                                    await updateEmployee(selEmp.id, { ...selEmp, promoList: '' })
+                                      setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,promoList:''}:e))
+                                      showToast('Файл ўчирилди')
+                                    }} style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Ўчириш</button>
+                                  </div>
+                                : <div style={{ color:'#aaa', fontSize:12, marginBottom:8 }}>📭 Файл юкланмаган</div>
+                              }
+                              <label style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB' }}>
+                                📎 Excel юклаш
+                                <input type="file" accept=".xlsx,.xls,.csv" style={{ display:'none' }} onChange={async e=>{
+                                  const file = e.target.files[0]
+                                  if (!file) return
+                                  try {
+                                    const path = `promo/${selEmp.id}/${Date.now()}_${file.name}`
+                                    const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
+                                    if (upErr) throw upErr
+                                    const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
+                                    await updateEmployee(selEmp.id, { ...selEmp, promoList: publicUrl })
+                                    setEmployees(p=>p.map(emp=>emp.id===selEmp.id?{...emp,promoList:publicUrl}:emp))
+                                    showToast(`${file.name} юкланди`)
+                                  } catch(err) { showToast('Хатолик: ' + err.message, 'error') }
+                                }} />
+                              </label>
+                            </div>
                             : <div style={{ fontSize:14, color:'#1A1A2E', whiteSpace:'pre-wrap', lineHeight:1.6 }}>{val}</div>
                         }
                       </div>

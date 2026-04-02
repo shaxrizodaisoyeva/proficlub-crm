@@ -699,7 +699,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     const init = {}
     employees.forEach(e=>{
       const ex = e.examResults?.find(r=>r.trainingId===training.id)
-      if (ex) init[e.id] = { mcScore:ex.mcScore, openAnswers:ex.openAnswers?.reduce((a,x)=>({...a,[x.q]:x.a}),{})||{} }
+      if (ex) init[e.id] = { mcScore:ex.mcScore, openAnswers:ex.openAnswers?.reduce((a,x)=>({...a,[x.q]:x.a}),{})||{}, homeworkUrl:ex.homeworkUrl||'', homeworkName:ex.homeworkName||'' }
     })
     setScores(init)
   },[training.id, employees])
@@ -714,7 +714,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     try {
       const updates = Object.entries(scores)
         .filter(([,s])=>s?.mcScore!==''&&s?.mcScore!=null)
-        .map(([empId,s])=>({ empId:Number(empId), score:Number(s.mcScore), openAnswers:(training.questions||[]).map(q=>({ q, a:s.openAnswers?.[q]||'' })) }))
+        .map(([empId,s])=>({ empId:Number(empId), score:Number(s.mcScore), openAnswers:(training.questions||[]).map(q=>({ q, a:s.openAnswers?.[q]||'' })), homeworkUrl:s.homeworkUrl||'', homeworkName:s.homeworkName||'' }))
       await saveBulkExamResults(training, updates)
       onToast(`${updates.length} та натижа сақланди`)
       onSave()
@@ -745,6 +745,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
             <tr style={{ background:'#F5F7FA' }}>
               <th style={{ padding:'10px 14px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase' }}>Ходим</th>
               <th style={{ padding:'10px 14px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase' }}>Балл</th>
+              <th style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:160 }}>Уй вазифаси</th>
               {(training.questions||[]).map((q,i)=>(
                 <th key={i} style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:150 }}>
                   Савол {i+1}<div style={{ fontSize:9, color:'#ccc', fontWeight:400, maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q}</div>
@@ -779,6 +780,32 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
                         placeholder="Жавоб..." style={{ width:150, padding:'5px 8px', border:'1.5px solid #E0E0E0', borderRadius:7, fontSize:12, fontFamily:'inherit', resize:'none', outline:'none', background:'#FAFAFA' }} />
                     </td>
                   ))}
+                  <td style={{ padding:'7px 10px' }}>
+                    {scores[emp.id]?.homeworkUrl
+                      ? <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <a href={scores[emp.id].homeworkUrl} target="_blank" rel="noreferrer"
+                          style={{ fontSize:11, color:'#1976D2', fontWeight:700, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>
+                          📎 {scores[emp.id].homeworkName}
+                        </a>
+                        <button onClick={()=>setScores(p=>({...p,[emp.id]:{...p[emp.id],homeworkUrl:'',homeworkName:''}}))}
+                          style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:6, padding:'2px 6px', fontSize:10, cursor:'pointer' }}>✕</button>
+                      </div>
+                    : <label style={{ display:'inline-flex', alignItems:'center', gap:4, background:'#F0F4FF', color:'#1565C0', borderRadius:7, padding:'5px 8px', fontSize:11, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB' }}>
+                        📎 Юклаш
+                        <input type="file" style={{ display:'none' }} onChange={async e=>{
+                          const file = e.target.files[0]
+                          if (!file) return
+                          try {
+                            const path = `homework/${training.id}/${emp.id}/${Date.now()}_${file.name}`
+                            const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
+                            if (upErr) throw upErr
+                            const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
+                            setScores(p=>({...p,[emp.id]:{...p[emp.id],homeworkUrl:publicUrl,homeworkName:file.name}}))
+                          } catch(err) { onToast('Хатолик: ' + err.message, 'error') }
+                        }} />
+                      </label>
+                    }
+                  </td>
                 </tr>
               )
             })}

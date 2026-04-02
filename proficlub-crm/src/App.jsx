@@ -1231,7 +1231,7 @@ export default function App() {
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
                   {fields.map(f=>{
                     const val = editing ? editData[f.key] : selEmp[f.key]
-                    if (!editing && !val) return null
+                    if (!editing && !val && f.key !== 'promoList') return null
                     return (
                       <div key={f.key} style={{ ...CARD, gridColumn:(f.type==='textarea'||f.type==='promo'||f.type==='excel')?'1/-1':'auto', marginBottom:0 }}>
                         <label style={LBL}>{f.label}</label>

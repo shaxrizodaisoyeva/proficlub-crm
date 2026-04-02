@@ -745,12 +745,12 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
             <tr style={{ background:'#F5F7FA' }}>
               <th style={{ padding:'10px 14px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase' }}>Ходим</th>
               <th style={{ padding:'10px 14px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase' }}>Балл</th>
-              <th style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:160 }}>Уй вазифаси</th>
               {(training.questions||[]).map((q,i)=>(
                 <th key={i} style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:150 }}>
                   Савол {i+1}<div style={{ fontSize:9, color:'#ccc', fontWeight:400, maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q}</div>
                 </th>
               ))}
+              <th style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:160 }}>Уй вазифаси</th>
             </tr>
           </thead>
           <tbody>
@@ -1234,7 +1234,16 @@ export default function App() {
                 </div>
                 <div style={{ display:'flex', gap:7 }}>
                   {!editing
-                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button><button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
+                    ? <><button onClick={()=>{ setEditData({...selEmp}); setEditing(true) }} style={BTN('#1976D2')}>✏️ Таҳрирлаш</button>
+                       <button onClick={async ()=>{
+                         const newStar = !selEmp.isStar
+                         await updateEmployee(selEmp.id, { ...selEmp, isStar: newStar })
+                         setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,isStar:newStar}:e))
+                         showToast(newStar ? '⭐ Практикум аъзоси белгиланди' : 'Практикум аъзолигидан чиқарилди')
+                       }} style={{ ...BTN(selEmp.isStar?'#FEF3C7':'#F5F7FA', selEmp.isStar?'#92400E':'#888'), border:`1.5px solid ${selEmp.isStar?'#FDE68A':'#E0E0E0'}` }}>
+                         {selEmp.isStar ? '⭐ Практикумда' : '☆ Практикумга қўшиш'}
+                       </button>
+                       <button onClick={()=>setDelConfirm(selEmp.id)} style={{ ...BTN('#FFF0F0','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button></>
                     : <><button onClick={handleSaveEdit} disabled={saving} style={BTN('#388E3C')}>{saving?'Сақланяпти...':'✅ Сақлаш'}</button><button onClick={()=>setEditing(false)} style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>❌ Бекор</button></>
                   }
                 </div>

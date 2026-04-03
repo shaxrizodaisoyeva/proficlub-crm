@@ -706,10 +706,9 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
 
   const filledCount = Object.keys(scores).filter(id => {
     const s = scores[id];
-    const hasHomework = !!s?.homeworkUrl;
-    const hasAnswers = s?.openAnswers && Object.values(s.openAnswers).some(ans => ans.trim() !== '');
-    
-    return hasScore || hasHomework || hasAnswers;
+    return (s?.mcScore !== '' && s?.mcScore != null) || 
+         (!!s?.homeworkUrl) || 
+         (s?.openAnswers && Object.values(s.openAnswers).some(ans => ans && ans.trim() !== ''));
   }).length;
   const sessionEmpIds = session?.session_participants?.map(p => p.employee_id) || null
   const allEmps = sessionEmpIds ? employees.filter(e => sessionEmpIds.includes(e.id)) : employees

@@ -808,21 +808,44 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
                           style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:6, padding:'2px 6px', fontSize:10, cursor:'pointer' }}>✕</button>
                       </div>
                     : <label style={{ display:'inline-flex', alignItems:'center', gap:4, background:'#F0F4FF', color:'#1565C0', borderRadius:7, padding:'5px 8px', fontSize:11, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB' }}>
-                        📎 Юклаш
-                        <input type="file" style={{ display:'none' }} onChange={async e=>{
-                          const file = e.target.files[0]
-                          if (!file) return
-                          try {
-                            const fileExt = file.name.split('.').pop();
-                            const fileName = `hw_${emp.id}_${Date.now()}.${fileExt}`;
-                            const path = `homework/${training.id}/${emp.id}/${fileName}`;
-                            const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file, { upsert: true })
-                            if (upErr) throw upErr
-                            const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
-                            setScores(p=>({...p,[emp.id]:{...p[emp.id],homeworkUrl:publicUrl,homeworkName:file.name}}))
-                          } catch(err) { onToast('Хатолик: ' + err.message, 'error') }
-                        }} />
-                      </label>
+                      📎 Юклаш
+                      <input type="file" style={{ display:'none' }} onChange={async e => {
+                        e.preventDefault();
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        try {
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `hw_${emp.id}_${Date.now()}.${fileExt}`;
+                          const path = `homework/${training.id}/${emp.id}/${fileName}`;
+
+                          const { error: upErr } = await supabase.storage
+                            .from('training-materials')
+                            .upload(path, file, { upsert: true });
+
+                          if (upErr) throw upErr;
+
+                          const { data: { publicUrl } } = supabase.storage
+                            .from('training-materials')
+                            .getPublicUrl(path);
+
+                          setScores(p => ({
+                            ...p,
+                            [emp.id]: {
+                              ...p[emp.id],
+                              homeworkUrl: publicUrl,
+                              homeworkName: file.name
+                            }
+                          }));
+
+                          onToast('Файл юкланди', 'success');
+                        } catch(err) { 
+                          onToast('Хатолик: ' + err.message, 'error');
+                        } finally {
+                          e.target.value = ""; // Inputни тозалаш
+                        }
+                      }} />
+                     </label>
                     }
                   </td>
                 </tr>

@@ -704,7 +704,13 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     setScores(init)
   },[training.id, employees])
 
-  const filledCount = Object.keys(scores).filter(id=>scores[id]?.mcScore!==''&&scores[id]?.mcScore!=null).length
+  const filledCount = Object.keys(scores).filter(id => {
+    const s = scores[id];
+    const hasHomework = !!s?.homeworkUrl;
+    const hasAnswers = s?.openAnswers && Object.values(s.openAnswers).some(ans => ans.trim() !== '');
+    
+    return hasScore || hasHomework || hasAnswers;
+  }).length;
   const sessionEmpIds = session?.session_participants?.map(p => p.employee_id) || null
   const allEmps = sessionEmpIds ? employees.filter(e => sessionEmpIds.includes(e.id)) : employees
   const filtered = allEmps.filter(e=>e.name.toLowerCase().includes(search.toLowerCase()))
@@ -713,8 +719,19 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     setSaving(true)
     try {
       const updates = Object.entries(scores)
-        .filter(([,s])=>s?.mcScore!==''&&s?.mcScore!=null)
-        .map(([empId,s])=>({ empId:Number(empId), score:Number(s.mcScore), openAnswers:(training.questions||[]).map(q=>({ q, a:s.openAnswers?.[q]||'' })), homeworkUrl:s.homeworkUrl||'', homeworkName:s.homeworkName||'' }))
+        .filter(([, s]) => {
+          const hasScore = s?.mcScore !== '' && s?.mcScore != null;
+          const hasHomework = !!s?.homeworkUrl;
+          const hasAnswers = s?.openAnswers && Object.values(s.openAnswers).some(ans => ans && ans.trim() !== '');
+          return hasScore || hasHomework || hasAnswers;
+        })
+        .map(([empId, s]) => ({ 
+          empId: Number(empId), 
+          score: (s.mcScore !== '' && s.mcScore != null) ? Number(s.mcScore) : 0, 
+          openAnswers: (training.questions || []).map(q => ({ q, a: s.openAnswers?.[q] || '' })), 
+          homeworkUrl: s.homeworkUrl || '', 
+          homeworkName: s.homeworkName || '' 
+        }));
       await saveBulkExamResults(training, updates)
       onToast(`${updates.length} та натижа сақланди`)
       onSave()

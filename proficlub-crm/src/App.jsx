@@ -796,9 +796,10 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
                           const file = e.target.files[0]
                           if (!file) return
                           try {
-                            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-                            const path = `homework/${training.id}/${emp.id}/${Date.now()}_${safeName}`
-                            const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
+                            const fileExt = file.name.split('.').pop();
+                            const fileName = `hw_${emp.id}_${Date.now()}.${fileExt}`;
+                            const path = `homework/${training.id}/${emp.id}/${fileName}`;
+                            const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file, { upsert: true })
                             if (upErr) throw upErr
                             const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
                             setScores(p=>({...p,[emp.id]:{...p[emp.id],homeworkUrl:publicUrl,homeworkName:file.name}}))

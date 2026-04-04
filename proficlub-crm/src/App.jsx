@@ -641,7 +641,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
           <div style={{ ...CARD, padding:0, overflow:'hidden' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead><tr style={{ background:'#F5F7FA' }}>
-                {['#','Ходим','Лавозим','Балл','Ҳолат','Сана'].map(h=>(
+                {['#','Ходим','Лавозим','Балл','Ҳолат','Сана','Уй вазифаси'].map(h=>(
                   <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontWeight:700, fontSize:10, color:'#888', textTransform:'uppercase', letterSpacing:0.4 }}>{h}</th>
                 ))}
               </tr></thead>

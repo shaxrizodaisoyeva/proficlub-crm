@@ -8,10 +8,10 @@ import {
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
-const ROLES = ['Менежер', 'МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
+const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
-   'МП':  { bg:'#E8F5E9', text:'#2E7D32', dot:'#388E3C' },
+  'МП':            { bg:'#E8F5E9', text:'#2E7D32', dot:'#388E3C' },
   'Оператор':      { bg:'#F3E5F5', text:'#6A1B9A', dot:'#8E24AA' },
   'Ҳайдовчи':      { bg:'#FFF3E0', text:'#E65100', dot:'#F57C00' },
   'Таҳлилчи':      { bg:'#E0F2F1', text:'#00695C', dot:'#00897B' },

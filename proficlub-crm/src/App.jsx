@@ -695,36 +695,36 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
             ))}
         </div>
       )}
+      {tab==='homework' && (
+        <div>
+          {withResult.filter(x=>x.res?.homeworkUrl).length === 0
+          ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>📭</div>
+              <div>Ҳали уй вазифаси юкланмаган</div>
+            </div>
+          : withResult.filter(x=>x.res?.homeworkUrl).sort((a,b)=>a.emp.name.localeCompare(b.emp.name)).map(({emp,res})=>(
+            <div key={emp.id} style={{ ...CARD, display:'flex', alignItems:'center', gap:12 }}>
+              <Avatar name={emp.name} size={36} />
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:13 }}>{emp.name}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:3 }}>
+                  <Badge role={emp.role} />
+                  {res.totalScore > 0 && <ScorePill score={res.totalScore} passed={res.passed} />}
+                </div>
+              </div>
+              <a href={res.homeworkUrl} target="_blank" rel="noreferrer"
+                style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
+                ⬇ {res.homeworkName || 'Юклаш'}
+              </a>
+            </div>
+           ))
+         }
+       </div>
+     )}
     </div>
   )
 }
 
-{tab==='homework' && (
-  <div>
-    {withResult.filter(x=>x.res?.homeworkUrl).length === 0
-      ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>📭</div>
-          <div>Ҳали уй вазифаси юкланмаган</div>
-        </div>
-      : withResult.filter(x=>x.res?.homeworkUrl).sort((a,b)=>a.emp.name.localeCompare(b.emp.name)).map(({emp,res})=>(
-        <div key={emp.id} style={{ ...CARD, display:'flex', alignItems:'center', gap:12 }}>
-          <Avatar name={emp.name} size={36} />
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:700, fontSize:13 }}>{emp.name}</div>
-            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:3 }}>
-              <Badge role={emp.role} />
-              {res.totalScore > 0 && <ScorePill score={res.totalScore} passed={res.passed} />}
-            </div>
-          </div>
-          <a href={res.homeworkUrl} target="_blank" rel="noreferrer"
-            style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
-            ⬇ {res.homeworkName || 'Юклаш'}
-          </a>
-        </div>
-      ))
-    }
-  </div>
-)}
 function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) {
   const [scores, setScores] = useState({})
   const [search, setSearch] = useState('')

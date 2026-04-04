@@ -96,7 +96,7 @@ export async function saveBulkExamResults(training, updates) {
       date: training.date,
       mcScore: update.score,
       totalScore: update.score,
-      passed: update.score >= 60,
+      passed: update.score > 0 && update.score >= 60,
       homeworkUrl: update.homeworkUrl || '',
       homeworkName: update.homeworkName || '',
       openAnswers: update.openAnswers ?? [],

@@ -8,10 +8,10 @@ import {
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
-const ROLES = ['Менежер','МП','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
+const ROLES = ['Менежер','Савдо вакили','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
-  'МП':            { bg:'#E8F5E9', text:'#2E7D32', dot:'#388E3C' },
+  'Савдо вакили':  { bg:'#E8F5E9', text:'#2E7D32', dot:'#388E3C' },
   'Оператор':      { bg:'#F3E5F5', text:'#6A1B9A', dot:'#8E24AA' },
   'Ҳайдовчи':      { bg:'#FFF3E0', text:'#E65100', dot:'#F57C00' },
   'Таҳлилчи':      { bg:'#E0F2F1', text:'#00695C', dot:'#00897B' },
@@ -32,7 +32,7 @@ const ROLE_FIELDS = {
     { key:'teamSize',      label:'Жамоасидаги ходимлар сони',     type:'text' },
     { key:'staffTurnover', label:'Ходимлар алмашуви',             type:'text' },
   ],
-  'МП': [
+  'Савдо вакили': [
     { key:'organization',  label:'Ташкилот',                      type:'text' },
     { key:'birthDate',     label:'Туғилган санаси',               type:'date' },
     { key:'educationLevel',label:'Маълумоти',                     type:'text' },
@@ -484,7 +484,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       )}
 
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
-        {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар']].map(([t,l])=>(
+        {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар'],['homework','📎 Уй вазифалари']].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:tab===t?'#1976D2':'#fff', color:tab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
         ))}
       </div>
@@ -655,6 +655,15 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                     : <span style={{ color:'#ddd' }}>—</span>}</td>
                   <td style={{ padding:'9px 14px' }}>{res ? <ScorePill score={res.totalScore} passed={res.passed} /> : <span style={{ fontSize:11, color:'#ccc' }}>Киритилмаган</span>}</td>
                   <td style={{ padding:'9px 14px', color:'#888', fontSize:12 }}>{res?.date||'—'}</td>
+                  <td style={{ padding:'9px 14px' }}>
+                    {res?.homeworkUrl
+                      ? <a href={res.homeworkUrl} target="_blank" rel="noreferrer"
+                          style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>
+                          📎 {res.homeworkName || 'Файл'}
+                        </a>
+                      : <span style={{ color:'#ccc', fontSize:11 }}>—</span>
+                    }
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
@@ -690,6 +699,32 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   )
 }
 
+{tab==='homework' && (
+  <div>
+    {withResult.filter(x=>x.res?.homeworkUrl).length === 0
+      ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>📭</div>
+          <div>Ҳали уй вазифаси юкланмаган</div>
+        </div>
+      : withResult.filter(x=>x.res?.homeworkUrl).sort((a,b)=>a.emp.name.localeCompare(b.emp.name)).map(({emp,res})=>(
+        <div key={emp.id} style={{ ...CARD, display:'flex', alignItems:'center', gap:12 }}>
+          <Avatar name={emp.name} size={36} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:13 }}>{emp.name}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:3 }}>
+              <Badge role={emp.role} />
+              {res.totalScore > 0 && <ScorePill score={res.totalScore} passed={res.passed} />}
+            </div>
+          </div>
+          <a href={res.homeworkUrl} target="_blank" rel="noreferrer"
+            style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
+            ⬇ {res.homeworkName || 'Юклаш'}
+          </a>
+        </div>
+      ))
+    }
+  </div>
+)}
 function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) {
   const [scores, setScores] = useState({})
   const [search, setSearch] = useState('')

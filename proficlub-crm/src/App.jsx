@@ -1374,7 +1374,8 @@ export default function App() {
                                   const file = e.target.files[0]
                                   if (!file) return
                                   try {
-                                    const path = `promo/${selEmp.id}/${Date.now()}_${file.name}`
+                                    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+                                    const path = `promo/${selEmp.id}/${Date.now()}_${safeName}`
                                     const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file)
                                     if (upErr) throw upErr
                                     const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)

@@ -799,7 +799,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
         })
         .map(([empId, s]) => ({ 
           empId: Number(empId), 
-          score: (s.mcScore !== '' && s.mcScore != null) ? Number(s.mcScore) : 0, 
+          score: (s.mcScore !== '' && s.mcScore != null) ? Number(s.mcScore) : null,
           openAnswers: (training.questions || []).map(q => ({ q, a: s.openAnswers?.[q] || '' })), 
           homeworkUrl: s.homeworkUrl || '', 
           homeworkName: s.homeworkName || '' 

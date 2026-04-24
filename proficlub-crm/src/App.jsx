@@ -242,6 +242,44 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
         </div>
       </div>
 
+      {(() => {
+        const graded = participants.filter(p => p.grade != null && p.grade >= 60)
+        const top3 = [...graded].sort((a,b) => b.grade - a.grade).slice(0,3)
+        const avg = graded.length ? Math.round(graded.reduce((s,p)=>s+p.grade,0)/graded.length) : null
+        if (!participants.length) return null
+        return (
+          <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:120 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Иштирокчилар</div>
+              <div style={{ fontSize:26, fontWeight:900 }}>{participants.length}</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{participants.filter(p=>p.star).length} ⭐ фаол</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:120 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Ўртача балл</div>
+              <div style={{ fontSize:26, fontWeight:900, color:avg?scoreColor(avg):'#ccc' }}>{avg??'—'}</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{graded.length} та баҳоланган</div>
+            </div>
+            {top3.length > 0 && (
+              <div style={{ ...CARD, marginBottom:0, flex:2, minWidth:200 }}>
+                <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:10 }}>🥇 Top 3</div>
+                {top3.map((p,i)=>{
+                  const emp = p.employees
+                  if (!emp) return null
+                  return (
+                    <div key={p.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                      <span style={{ width:20, height:20, borderRadius:'50%', background:['#FFD700','#C0C0C0','#CD7F32'][i], display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'#fff', flexShrink:0 }}>{i+1}</span>
+                      <Avatar name={emp.name} size={24} />
+                      <span style={{ flex:1, fontSize:12, fontWeight:600 }}>{emp.name}</span>
+                      <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 8px', fontSize:12, fontWeight:800 }}>{p.grade}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+}      )()}
+
       {/* Participants */}
       {participants.length === 0 ? (
         <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:40 }}>
@@ -1334,7 +1372,7 @@ export default function App() {
               )}
 
               <div style={{ display:'flex', gap:6, marginBottom:14 }}>
-                {[['info','📋 Маълумотлар'],[`exams`,`📊 Имтиҳонлар (${selEmp.examResults?.length||0})`]].map(([t,l])=>(
+                {[['info','📋 Маълумотлар'],[`exams`,`📊 Имтиҳонлар (${selEmp.examResults?.length||0})`],['praktikum','⭐ Практикум']].map(([t,l])=>(
                   <button key={t} onClick={()=>setEmpTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:empTab===t?'#1976D2':'#fff', color:empTab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
                 ))}
               </div>
@@ -1434,6 +1472,32 @@ export default function App() {
             </div>
           )
         })()}
+
+        {empTab==='praktikum' && (
+          <div>
+            {praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).length === 0
+              ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:36 }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>⭐</div>
+                  <div>Ҳали практикумда иштирок этмаган</div>
+                </div>
+              : praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).map(pr=>{
+                  const p = (pr.praktikum_participants||[]).find(x=>x.employee_id===selEmp.id)
+                  return (
+                    <div key={pr.id} style={{ ...CARD, borderLeft:`4px solid ${p?.star?'#F59E0B':'#E0E0E0'}` }}>
+                      <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{pr.title}</div>
+                      <div style={{ fontSize:12, color:'#888', marginBottom:8 }}>{pr.date}</div>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        {p?.star && <span style={{ background:'#FFFBEB', color:'#B45309', borderRadius:8, padding:'2px 10px', fontSize:12, fontWeight:700 }}>⭐ Практикумда</span>}
+                        {p?.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
+                        {p?.homework_url && <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name}</a>}
+                      </div>
+                      {p?.feedback && <div style={{ fontSize:13, color:'#555', marginTop:8, background:'#F8F9FA', borderRadius:8, padding:'7px 10px' }}>💬 {p.feedback}</div>}
+                    </div>
+                  )
+              })
+            }
+          </div>
+        )}
 
         {page==='employees' && !selEmp && !adding && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80%', color:'#ccc' }}>

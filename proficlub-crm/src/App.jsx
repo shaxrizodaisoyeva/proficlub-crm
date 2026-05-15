@@ -2221,6 +2221,55 @@ export default function App() {
                     {salesLoading && !uploadStatus.startsWith('✅') && !uploadStatus.startsWith('❌') ? '⏳ ' : ''}{uploadStatus}
                   </div>
                 )}
+                <div style={{ ...CARD, borderTop:'4px solid #C62828', marginTop:14 }}>
+                  <div style={{ fontWeight:800, fontSize:15, marginBottom:6, color:'#C62828' }}>🗑️ Маълумотларни ўчириш</div>
+                  <div style={{ fontSize:12, color:'#888', marginBottom:14 }}>Нотўғри юкланган маълумотларни ўчириш учун</div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                    <div>
+                      <label style={LBL}>Йил</label>
+                      <select id="del-yil" style={{ ...SI, width:100 }}>
+                    <option value=''>—</option>
+                    {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={LBL}>Ой</label>
+                      <select id="del-oy" style={{ ...SI, width:130 }}>
+                        <option value=''>—</option>
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={m}>{m}-ой</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={LBL}>Фирма</label>
+                      <select id="del-firma" style={{ ...SI, width:110 }}>
+                        <option value=''>—</option>
+                        {['PPS','IPS','RMF','PPHS-II'].map(f=><option key={f}>{f}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    <button onClick={async ()=>{
+                      const yil = document.getElementById('del-yil').value
+                      const oy = document.getElementById('del-oy').value
+                      const firma = document.getElementById('del-firma').value
+                      if (!yil && !oy && !firma) { showToast('Камида биттасини танланг', 'error'); return }
+                      if (!window.confirm(`Савдо: йил=${yil||'барча'}, ой=${oy||'барча'}, фирма=${firma||'барча'} ўчирилади. Тасдиқлайсизми?`)) return
+                      try {
+                        await deleteSalesByFilter(yil, oy, firma)
+                        showToast('Савдо маълумотлари ўчирилди')
+                        setUploadStatus('')
+                      } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+                    }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ Савдони ўчириш</button>
+
+                    <button onClick={async ()=>{
+                      if (!window.confirm('БАРЧА план-факт маълумотлари ўчирилади. Тасдиқлайсизми?')) return
+                      try {
+                        await deleteAllPlanFakt()
+                        showToast('План-факт ўчирилди')
+                      } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+                    }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ План-фактни ўчириш</button>
+                  </div>
+                </div>
               </div>
             </div>
         )}

@@ -208,3 +208,64 @@ export async function removePraktikumParticipant(id) {
     .eq('id', id)
   if (error) throw error
 }
+
+
+// ── SALES ────────────────────────────────────────────────────────────────────
+
+export async function fetchSales(filters = {}) {
+  let query = supabase.from('sales').select('*').order('sana', { ascending: false })
+  if (filters.firma) query = query.eq('firma', filters.firma)
+  if (filters.yil) query = query.eq('yil', filters.yil)
+  if (filters.oy) query = query.eq('oy', filters.oy)
+  if (filters.savdo_vakili) query = query.ilike('savdo_vakili', `%${filters.savdo_vakili}%`)
+  if (filters.jamoa) query = query.ilike('jamoa', `%${filters.jamoa}%`)
+  if (filters.tur) query = query.eq('tur', filters.tur)
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function uploadSalesBatch(rows) {
+  const BATCH = 500
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await supabase.from('sales').insert(rows.slice(i, i + BATCH))
+    if (error) throw error
+  }
+}
+
+export async function deleteSalesByMonth(yil, oy, firma) {
+  const { error } = await supabase.from('sales')
+    .delete()
+    .eq('yil', yil)
+    .eq('oy', oy)
+    .eq('firma', firma)
+  if (error) throw error
+}
+
+// ── PLAN FAKT ─────────────────────────────────────────────────────────────────
+
+export async function fetchPlanFakt(filters = {}) {
+  let query = supabase.from('plan_fakt').select('*').order('oy', { ascending: false })
+  if (filters.yil) query = query.eq('yil', filters.yil)
+  if (filters.oy) query = query.eq('oy', filters.oy)
+  if (filters.menejer) query = query.ilike('menejer', `%${filters.menejer}%`)
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function uploadPlanFaktBatch(rows) {
+  const BATCH = 500
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await supabase.from('plan_fakt').insert(rows.slice(i, i + BATCH))
+    if (error) throw error
+  }
+}
+
+export async function deletePlanFaktByMonth(yil, oy) {
+  const { error } = await supabase.from('plan_fakt')
+    .delete()
+    .eq('yil', yil)
+    .eq('oy', oy)
+  if (error) throw error
+}

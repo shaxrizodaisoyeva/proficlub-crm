@@ -269,3 +269,21 @@ export async function deletePlanFaktByMonth(yil, oy) {
     .eq('oy', oy)
   if (error) throw error
 }
+export async function deleteSalesByFilter(yil, oy, firma) {
+  let query = supabase.from('sales').delete()
+  if (yil) query = query.eq('yil', Number(yil))
+  if (oy) query = query.eq('oy', Number(oy))
+  if (firma) query = query.eq('firma', firma)
+  const { error } = await query
+  if (error) throw error
+}
+
+export async function deleteAllSales() {
+  const { error } = await supabase.from('sales').delete().neq('id', 0)
+  if (error) throw error
+}
+
+export async function deleteAllPlanFakt() {
+  const { error } = await supabase.from('plan_fakt').delete().neq('id', 0)
+  if (error) throw error
+}

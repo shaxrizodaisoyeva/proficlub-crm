@@ -5,6 +5,8 @@ import {
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
   fetchPraktikum, createPraktikum, updatePraktikum, deletePraktikum,
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
+  fetchSales, uploadSalesBatch, deleteSalesByMonth,
+  fetchPlanFakt, uploadPlanFaktBatch, deletePlanFaktByMonth,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -401,6 +403,444 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
             <button onClick={()=>{ setAddingEmp(false); setEmpSearch('') }} style={{ ...BTN('#F5F7FA','#555'), width:'100%', marginTop:12, border:'1.5px solid #ddd' }}>Бекор</button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+// ── SALES REPORT ─────────────────────────────────────────────────────────────
+function SalesReport({ fetchSales, showToast, employees }) {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [filters, setFilters] = useState({ firma:'', yil:'', oy:'', savdo_vakili:'', jamoa:'', tur:'' })
+  const [loaded, setLoaded] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    try {
+      const f = {}
+      if (filters.firma) f.firma = filters.firma
+      if (filters.yil) f.yil = Number(filters.yil)
+      if (filters.oy) f.oy = Number(filters.oy)
+      if (filters.savdo_vakili) f.savdo_vakili = filters.savdo_vakili
+      if (filters.jamoa) f.jamoa = filters.jamoa
+      if (filters.tur) f.tur = filters.tur
+      const res = await fetchSales(f)
+      setData(res)
+      setLoaded(true)
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    finally { setLoading(false) }
+  }
+
+  async function exportExcel() {
+    try {
+      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+      const ws = XLSX.utils.json_to_sheet(data.map(r=>({
+        'Фирма': r.firma, 'Йил': r.yil, 'Ой': r.oy, 'Сана': r.sana,
+        'Ҳисоб-фактура': r.hisob_faktura, 'Савдо вакили': r.savdo_vakili,
+        'Шаҳар': r.shahar, 'Жамоа': r.jamoa, 'Йетказиб берувчи': r.yetkazib_beruvchi,
+        'Ташкилот': r.tashkilot, 'Ишлаб чиқарувчи': r.ishlab_chiqaruvchi,
+        'Дори номи': r.dori_nomi, 'Миқдор': r.miqdor,
+        'Нарх': r.narx, 'Сумма': r.summa, 'Тур': r.tur,
+      })))
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Савдо')
+      XLSX.writeFile(wb, `savdo_hisobot_${filters.yil||'jami'}_${filters.oy||'hammasi'}.xlsx`)
+    } catch(e) { showToast('Export хатолик: ' + e.message, 'error') }
+  }
+
+  const totalSumma = data.filter(r=>r.tur!=='vozvrat').reduce((s,r)=>s+(r.summa||0),0)
+  const vozvratSumma = data.filter(r=>r.tur==='vozvrat').reduce((s,r)=>s+(r.summa||0),0)
+  const netSumma = totalSumma + vozvratSumma
+
+  return (
+    <div>
+      <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
+        <div style={{ fontWeight:800, fontSize:15, marginBottom:14 }}>📋 Савдо Ҳисоботи</div>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+          <div>
+            <label style={LBL}>Фирма</label>
+            <select value={filters.firma} onChange={e=>setFilters(p=>({...p,firma:e.target.value}))} style={{ ...SI, width:120 }}>
+              <option value=''>Барчаси</option>
+              {['PPS','IPS','RMF','PPHS-II'].map(f=><option key={f}>{f}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Йил</label>
+            <select value={filters.yil} onChange={e=>setFilters(p=>({...p,yil:e.target.value}))} style={{ ...SI, width:100 }}>
+              <option value=''>Барчаси</option>
+              {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Ой</label>
+            <select value={filters.oy} onChange={e=>setFilters(p=>({...p,oy:e.target.value}))} style={{ ...SI, width:110 }}>
+              <option value=''>Барчаси</option>
+              {['1-Январь','2-Февраль','3-Март','4-Апрель','5-Май','6-Июнь','7-Июль','8-Август','9-Сентябрь','10-Октябрь','11-Ноябрь','12-Декабрь'].map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Тур</label>
+            <select value={filters.tur} onChange={e=>setFilters(p=>({...p,tur:e.target.value}))} style={{ ...SI, width:120 }}>
+              <option value=''>Барчаси</option>
+              <option value='savdo'>Савдо</option>
+              <option value='vozvrat'>Қайтариш</option>
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Савдо вакили</label>
+            <input value={filters.savdo_vakili} onChange={e=>setFilters(p=>({...p,savdo_vakili:e.target.value}))} placeholder="Исм..." style={{ ...SI, width:150 }} />
+          </div>
+          <div>
+            <label style={LBL}>Жамоа</label>
+            <input value={filters.jamoa} onChange={e=>setFilters(p=>({...p,jamoa:e.target.value}))} placeholder="Жамоа..." style={{ ...SI, width:150 }} />
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={load} disabled={loading} style={{ ...BTN('#1976D2') }}>{loading ? '⏳ Юкланмоқда...' : '🔍 Кўрсатиш'}</button>
+          {loaded && <button onClick={exportExcel} style={{ ...BTN('#388E3C') }}>📥 Excel юклаш</button>}
+        </div>
+      </div>
+
+      {loaded && (
+        <>
+          <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Жами савдо</div>
+              <div style={{ fontSize:20, fontWeight:900, color:'#2E7D32' }}>{(totalSumma/1000000).toFixed(1)} млн</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{data.filter(r=>r.tur!=='vozvrat').length} та қатор</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Қайтариш</div>
+              <div style={{ fontSize:20, fontWeight:900, color:'#C62828' }}>{(vozvratSumma/1000000).toFixed(1)} млн</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{data.filter(r=>r.tur==='vozvrat').length} та қатор</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Соф савдо</div>
+              <div style={{ fontSize:20, fontWeight:900, color:'#1565C0' }}>{(netSumma/1000000).toFixed(1)} млн</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{data.length} та жами қатор</div>
+            </div>
+          </div>
+
+          <div style={{ ...CARD, padding:0, overflow:'auto', maxHeight:500 }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+              <thead><tr style={{ background:'#F5F7FA', position:'sticky', top:0 }}>
+                {['Сана','Фирма','Савдо вакили','Жамоа','Дори номи','Миқдор','Нарх','Сумма','Тур'].map(h=>(
+                  <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, fontSize:10, color:'#888', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>{data.slice(0,500).map((r,i)=>(
+                <tr key={r.id||i} style={{ borderTop:'1px solid #F0F0F0', background:r.tur==='vozvrat'?'rgba(239,83,80,0.04)':'transparent' }}>
+                  <td style={{ padding:'6px 10px', whiteSpace:'nowrap', color:'#888', fontSize:11 }}>{r.sana}</td>
+                  <td style={{ padding:'6px 10px' }}><FirmBadge firm={r.firma} /></td>
+                  <td style={{ padding:'6px 10px', fontWeight:600 }}>{r.savdo_vakili}</td>
+                  <td style={{ padding:'6px 10px', color:'#555', fontSize:11 }}>{r.jamoa}</td>
+                  <td style={{ padding:'6px 10px', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
+                  <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.miqdor}</td>
+                  <td style={{ padding:'6px 10px', textAlign:'right', color:'#888' }}>{r.narx?.toLocaleString()}</td>
+                  <td style={{ padding:'6px 10px', textAlign:'right', fontWeight:700, color:r.tur==='vozvrat'?'#C62828':'#2E7D32' }}>{r.summa?.toLocaleString()}</td>
+                  <td style={{ padding:'6px 10px' }}><span style={{ background:r.tur==='vozvrat'?'#FFEBEE':'#E8F5E9', color:r.tur==='vozvrat'?'#C62828':'#2E7D32', borderRadius:6, padding:'2px 8px', fontSize:10, fontWeight:700 }}>{r.tur==='vozvrat'?'Қайтариш':'Савдо'}</span></td>
+                </tr>
+              ))}</tbody>
+            </table>
+            {data.length > 500 && <div style={{ padding:'10px 14px', fontSize:12, color:'#888', textAlign:'center' }}>Жадвалда 500 та кўрсатилди. Excel да тўлиқ кўринади ({data.length} та жами)</div>}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── PLAN FAKT REPORT ──────────────────────────────────────────────────────────
+function PlanFaktReport({ fetchPlanFakt, showToast }) {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [filters, setFilters] = useState({ yil:'', oy:'', menejer:'' })
+  const [loaded, setLoaded] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    try {
+      const f = {}
+      if (filters.yil) f.yil = Number(filters.yil)
+      if (filters.oy) f.oy = Number(filters.oy)
+      if (filters.menejer) f.menejer = filters.menejer
+      const res = await fetchPlanFakt(f)
+      setData(res)
+      setLoaded(true)
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    finally { setLoading(false) }
+  }
+
+  async function exportExcel() {
+    try {
+      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+      const ws = XLSX.utils.json_to_sheet(data.map(r=>({
+        'Менежер': r.menejer, 'Ой': r.oy, 'Йил': r.yil, 'Жамоа': r.jamoa,
+        'Дори номи': r.dori_nomi, 'Нарх': r.narx,
+        'План миқдор': r.plan_miqdor, 'Сотиш А': r.sotish_a, 'Сотиш Б': r.sotish_b,
+        'Жами миқдор': r.jami_miqdor, 'Фоиз': r.foiz,
+        'План сумма': r.plan_summa, 'Сотиш сумма': r.sotish_summa,
+      })))
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'План-Факт')
+      XLSX.writeFile(wb, `plan_fakt_${filters.oy||'jami'}.xlsx`)
+    } catch(e) { showToast('Export хатолик: ' + e.message, 'error') }
+  }
+
+  const byMenejer = data.reduce((acc, r) => {
+    const key = r.menejer || '—'
+    if (!acc[key]) acc[key] = { plan:0, fakt:0 }
+    acc[key].plan += r.plan_summa || 0
+    acc[key].fakt += r.sotish_summa || 0
+    return acc
+  }, {})
+
+  return (
+    <div>
+      <div style={{ ...CARD, borderTop:'4px solid #F59E0B' }}>
+        <div style={{ fontWeight:800, fontSize:15, marginBottom:14 }}>📊 План-Факт Ҳисоботи</div>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+          <div>
+            <label style={LBL}>Йил</label>
+            <select value={filters.yil} onChange={e=>setFilters(p=>({...p,yil:e.target.value}))} style={{ ...SI, width:100 }}>
+              <option value=''>Барчаси</option>
+              {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Ой</label>
+            <select value={filters.oy} onChange={e=>setFilters(p=>({...p,oy:e.target.value}))} style={{ ...SI, width:130 }}>
+              <option value=''>Барчаси</option>
+              {['1-Январь','2-Февраль','3-Март','4-Апрель','5-Май','6-Июнь','7-Июль','8-Август','9-Сентябрь','10-Октябрь','11-Ноябрь','12-Декабрь'].map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={LBL}>Менежер</label>
+            <input value={filters.menejer} onChange={e=>setFilters(p=>({...p,menejer:e.target.value}))} placeholder="Исм..." style={{ ...SI, width:160 }} />
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={load} disabled={loading} style={{ ...BTN('#F59E0B') }}>{loading ? '⏳...' : '🔍 Кўрсатиш'}</button>
+          {loaded && <button onClick={exportExcel} style={{ ...BTN('#388E3C') }}>📥 Excel юклаш</button>}
+        </div>
+      </div>
+
+      {loaded && Object.keys(byMenejer).length > 0 && (
+        <div style={{ ...CARD }}>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>Менежерлар бўйича</div>
+          {Object.entries(byMenejer).sort((a,b)=>b[1].fakt-a[1].fakt).map(([name, v])=>{
+            const pct = v.plan > 0 ? Math.round((v.fakt/v.plan)*100) : 0
+            return (
+              <div key={name} style={{ marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ fontWeight:700, fontSize:13 }}>{name}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color: pct>=100?'#2E7D32':pct>=70?'#F57C00':'#C62828' }}>{pct}%</span>
+                </div>
+                <div style={{ height:8, background:'#F0F0F0', borderRadius:4, overflow:'hidden' }}>
+                  <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background:pct>=100?'#4CAF50':pct>=70?'#FFA726':'#EF5350', borderRadius:4 }} />
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#888', marginTop:2 }}>
+                  <span>Факт: {(v.fakt/1000000).toFixed(1)} млн</span>
+                  <span>План: {(v.plan/1000000).toFixed(1)} млн</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {loaded && (
+        <div style={{ ...CARD, padding:0, overflow:'auto', maxHeight:400 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead><tr style={{ background:'#F5F7FA', position:'sticky', top:0 }}>
+              {['Менежер','Жамоа','Дори номи','План миқдор','Жами миқдор','%','План сумма','Сотиш сумма'].map(h=>(
+                <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, fontSize:10, color:'#888', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>{data.slice(0,300).map((r,i)=>(
+              <tr key={r.id||i} style={{ borderTop:'1px solid #F0F0F0', background:(r.foiz||0)<70?'rgba(239,83,80,0.03)':'transparent' }}>
+                <td style={{ padding:'6px 10px', fontWeight:600 }}>{r.menejer}</td>
+                <td style={{ padding:'6px 10px', color:'#555', fontSize:11 }}>{r.jamoa}</td>
+                <td style={{ padding:'6px 10px', maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
+                <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.plan_miqdor}</td>
+                <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.jami_miqdor}</td>
+                <td style={{ padding:'6px 10px', textAlign:'right' }}>
+                  <span style={{ background:(r.foiz||0)>=100?'#E8F5E9':(r.foiz||0)>=70?'#FFF8E1':'#FFEBEE', color:(r.foiz||0)>=100?'#2E7D32':(r.foiz||0)>=70?'#F57C00':'#C62828', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{r.foiz||0}%</span>
+                </td>
+                <td style={{ padding:'6px 10px', textAlign:'right', color:'#888' }}>{r.plan_summa?.toLocaleString()}</td>
+                <td style={{ padding:'6px 10px', textAlign:'right', fontWeight:700 }}>{r.sotish_summa?.toLocaleString()}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SALES DASHBOARD ───────────────────────────────────────────────────────────
+function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
+  const [sales, setSales] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [yil, setYil] = useState(new Date().getFullYear().toString())
+  const [oy, setOy] = useState('')
+
+  useEffect(() => { loadData() }, [])
+
+  async function loadData() {
+    setLoading(true)
+    try {
+      const f = {}
+      if (yil) f.yil = Number(yil)
+      if (oy) f.oy = Number(oy)
+      const res = await fetchSales(f)
+      setSales(res.filter(r=>r.tur!=='vozvrat'))
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    finally { setLoading(false) }
+  }
+
+  // Top menejerlar
+  const byMenejer = sales.reduce((acc,r)=>{
+    const k = r.savdo_vakili||'—'
+    acc[k] = (acc[k]||0) + (r.summa||0)
+    return acc
+  }, {})
+  const topMenejer = Object.entries(byMenejer).sort((a,b)=>b[1]-a[1]).slice(0,10)
+
+  // Top dorlar
+  const byDori = sales.reduce((acc,r)=>{
+    const k = r.dori_nomi||'—'
+    if (!acc[k]) acc[k] = { miqdor:0, summa:0 }
+    acc[k].miqdor += r.miqdor||0
+    acc[k].summa += r.summa||0
+    return acc
+  }, {})
+  const topDori = Object.entries(byDori).sort((a,b)=>b[1].miqdor-a[1].miqdor).slice(0,10)
+
+  // Oylik dinamika
+  const byOy = sales.reduce((acc,r)=>{
+    const k = r.oy||0
+    acc[k] = (acc[k]||0) + (r.summa||0)
+    return acc
+  }, {})
+  const oylar = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек']
+  const maxOy = Math.max(...Object.values(byOy), 1)
+
+  const totalSumma = sales.reduce((s,r)=>s+(r.summa||0), 0)
+
+  async function exportDashboard() {
+    try {
+      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+      const wb = XLSX.utils.book_new()
+
+      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name,summa],i)=>({ '#':i+1, 'Менежер':name, 'Сумма':summa, 'млн':(summa/1000000).toFixed(1) })))
+      XLSX.utils.book_append_sheet(wb, ws1, 'Top Менежерлар')
+
+      const ws2 = XLSX.utils.json_to_sheet(topDori.map(([name,v],i)=>({ '#':i+1, 'Дори':name, 'Миқдор':v.miqdor, 'Сумма':v.summa })))
+      XLSX.utils.book_append_sheet(wb, ws2, 'Top Дорилар')
+
+      const ws3 = XLSX.utils.json_to_sheet(Object.entries(byOy).map(([oy,summa])=>({ 'Ой':oylar[Number(oy)-1], 'Сумма':summa, 'млн':(summa/1000000).toFixed(1) })))
+      XLSX.utils.book_append_sheet(wb, ws3, 'Ойлик динамика')
+
+      XLSX.writeFile(wb, `dashboard_${yil}.xlsx`)
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  return (
+    <div>
+      <div style={{ ...CARD, borderTop:'4px solid #9C27B0' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
+          <div style={{ fontWeight:800, fontSize:15 }}>🏆 Савдо Дашборди</div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            <select value={yil} onChange={e=>setYil(e.target.value)} style={{ ...SI, width:90 }}>
+              {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+            </select>
+            <select value={oy} onChange={e=>setOy(e.target.value)} style={{ ...SI, width:130 }}>
+              <option value=''>Барча ойлар</option>
+              {['1-Янв','2-Фев','3-Мар','4-Апр','5-Май','6-Июн','7-Июл','8-Авг','9-Сен','10-Окт','11-Ноя','12-Дек'].map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+            <button onClick={loadData} style={{ ...BTN('#9C27B0') }}>🔄 Янгилаш</button>
+            <button onClick={exportDashboard} style={{ ...BTN('#388E3C') }}>📥 Excel</button>
+          </div>
+        </div>
+      </div>
+
+      {loading ? <Spinner /> : (
+        <>
+          <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:140 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Жами савдо</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#2E7D32' }}>{(totalSumma/1000000000).toFixed(2)} млрд</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:140 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Транзакциялар</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#1565C0' }}>{sales.length.toLocaleString()}</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:140 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Фаол вакиллар</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#9C27B0' }}>{Object.keys(byMenejer).length}</div>
+            </div>
+            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:140 }}>
+              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Турлар сони</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#F57C00' }}>{Object.keys(byDori).length}</div>
+            </div>
+          </div>
+
+          {/* Oylik grafik */}
+          <div style={{ ...CARD }}>
+            <div style={{ fontWeight:800, fontSize:14, marginBottom:14 }}>📈 Ойлик динамика</div>
+            <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:120 }}>
+              {oylar.map((m,i)=>{
+                const val = byOy[i+1]||0
+                const h = maxOy > 0 ? Math.round((val/maxOy)*100) : 0
+                return (
+                  <div key={m} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                    <div style={{ fontSize:9, color:'#888', fontWeight:700 }}>{val>0?(val/1000000).toFixed(0)+'M':''}</div>
+                    <div style={{ width:'100%', height:`${h}%`, minHeight:val>0?4:0, background:h>0?'#1976D2':'#F0F0F0', borderRadius:'4px 4px 0 0', transition:'height 0.3s' }} />
+                    <div style={{ fontSize:9, color:'#888' }}>{m}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            {/* Top menejerlar */}
+            <div style={{ ...CARD }}>
+              <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>🏆 Top 10 Менежер (сумма)</div>
+              {topMenejer.map(([name,summa],i)=>(
+                <div key={name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <span style={{ width:20, height:20, borderRadius:'50%', background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E0E0E0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:i<3?'#fff':'#666', flexShrink:0 }}>{i+1}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700 }}>{name}</div>
+                    <div style={{ height:5, background:'#F0F0F0', borderRadius:3, marginTop:3 }}>
+                      <div style={{ width:`${Math.round((summa/topMenejer[0][1])*100)}%`, height:'100%', background:'#1976D2', borderRadius:3 }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize:12, fontWeight:800, color:'#2E7D32', whiteSpace:'nowrap' }}>{(summa/1000000).toFixed(1)}M</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Top dorlar */}
+            <div style={{ ...CARD }}>
+              <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>💊 Top 10 Дори (миқдор)</div>
+              {topDori.map(([name,v],i)=>(
+                <div key={name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <span style={{ width:20, height:20, borderRadius:'50%', background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E0E0E0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:i<3?'#fff':'#666', flexShrink:0 }}>{i+1}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:11, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{name}</div>
+                    <div style={{ height:5, background:'#F0F0F0', borderRadius:3, marginTop:3 }}>
+                      <div style={{ width:`${Math.round((v.miqdor/topDori[0][1].miqdor)*100)}%`, height:'100%', background:'#9C27B0', borderRadius:3 }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize:12, fontWeight:800, color:'#9C27B0', whiteSpace:'nowrap' }}>{v.miqdor.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
@@ -970,6 +1410,13 @@ export default function App() {
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
   // Praktikum states
   const [selPrak, setSelPrak]     = useState(null)
+  // Sales states
+  const [salesPage, setSalesPage] = useState('upload') // 'upload' | 'report' | 'dashboard'
+  const [sales, setSales] = useState([])
+  const [planFakt, setPlanFakt] = useState([])
+  const [salesLoading, setSalesLoading] = useState(false)
+  const [salesFilter, setSalesFilter] = useState({ firma:'', yil:'', oy:'', savdo_vakili:'', jamoa:'' })
+  const [uploadStatus, setUploadStatus] = useState('')
   const [addingPrak, setAddingPrak] = useState(false)
   const [editingPrak, setEditingPrak] = useState(null)
   const [newPrak, setNewPrak]     = useState({ title:'', date:'', description:'' })
@@ -1185,6 +1632,7 @@ export default function App() {
             <button style={navBtn(page==='employees')} onClick={()=>{ setPage('employees'); setBulkMode(false) }}>👥 Ходимлар</button>
             <button style={navBtn(page==='exams')} onClick={()=>{ setPage('exams'); setBulkMode(false) }}>📋 Тренинглар</button>
             <button style={navBtn(page==='praktikum')} onClick={()=>{ setPage('praktikum'); setBulkMode(false) }}>⭐ Практикум</button>
+            <button style={navBtn(page==='sales')} onClick={()=>{ setPage('sales'); setBulkMode(false) }}>📈 Савдо</button>
           </div>
         </div>
 
@@ -1636,7 +2084,175 @@ export default function App() {
           </div>
         )}
       </div>
+      {page==='sales' && (
+        <div>
+          {/* Tabs */}
+          <div style={{ display:'flex', gap:6, marginBottom:18 }}>
+            {[['upload','📥 Юклаш'],['report','📋 Ҳисобот'],['planfakt','📊 План-Факт'],['dashboard','🏆 Дашборд']].map(([t,l])=>(
+              <button key={t} onClick={()=>setSalesPage(t)} style={{ padding:'8px 18px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:13, background:salesPage===t?'#1976D2':'#fff', color:salesPage===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
+            ))}
+          </div>
 
+          {/* UPLOAD TAB */}
+          {salesPage==='upload' && (
+            <div style={{ maxWidth:600 }}>
+              <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
+                <h2 style={{ margin:'0 0 6px', fontSize:17 }}>📥 Савдо маълумотларини юклаш</h2>
+                <div style={{ fontSize:13, color:'#888', marginBottom:16 }}>Excel файлни юкланг. Эски маълумотлар ўчирилмайди — янгилар қўшилади.</div>
+
+                <label style={LBL}>Савдо файли (Отчет_Продажа_Общая...)</label>
+                <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
+                  <span style={{ fontSize:28 }}>📊</span>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Excel файлни танланг</div>
+                    <div style={{ fontSize:11, color:'#888' }}>Отчет_Продажа_Общая файли</div>
+                  </div>
+                  <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
+                    const file = e.target.files[0]
+                    if (!file) return
+                    setSalesLoading(true)
+                    setUploadStatus('Файл ўқилмоқда...')
+                    try {
+                      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                      const buf = await file.arrayBuffer()
+                      const wb = XLSX.read(buf, { type:'array', cellDates:true })
+
+                      let allRows = []
+                      for (const shName of ['Продажа','Возврат']) {
+                        const ws = wb.Sheets[shName]
+                        if (!ws) continue
+                        const raw = XLSX.utils.sheet_to_json(ws, { header:1 })
+                        const tur = shName === 'Возврат' ? 'vozvrat' : 'savdo'
+                        // row[0] is header
+                        for (let i = 2; i < raw.length; i++) {
+                          const r = raw[i]
+                          if (!r || !r[0]) continue
+                          const sana = r[3] ? new Date(r[3]) : null
+                          allRows.push({
+                            firma: r[0]?.toString()?.trim() || '',
+                            yil: r[1] ? Number(r[1]) : (sana ? sana.getFullYear() : null),
+                            oy: r[2] ? Number(r[2]) : (sana ? sana.getMonth()+1 : null),
+                            sana: sana ? sana.toISOString().split('T')[0] : null,
+                            hisob_faktura: r[4]?.toString()?.trim() || '',
+                            savdo_vakili: r[5]?.toString()?.trim() || '',
+                            shahar: r[6]?.toString()?.trim() || '',
+                            jamoa: r[7]?.toString()?.trim() || '',
+                            yetkazib_beruvchi: r[8]?.toString()?.trim() || '',
+                            tashkilot: r[9]?.toString()?.trim() || '',
+                            ishlab_chiqaruvchi: r[10]?.toString()?.trim() || '',
+                            dori_nomi: r[12]?.toString()?.trim() || '',
+                            miqdor: r[13] ? Number(r[13]) : null,
+                            narx: r[14] ? Number(r[14]) : null,
+                            summa: r[15] ? Number(r[15]) : null,
+                            foiz_ustama: r[16] ? Number(r[16]) : null,
+                            ustama_summa: r[17] ? Number(r[17]) : null,
+                            tur,
+                          })
+                        }
+                      }
+                      setUploadStatus(`${allRows.length} та қатор топилди. Юкланмоқда...`)
+                      await uploadSalesBatch(allRows)
+                      setUploadStatus(`✅ ${allRows.length} та қатор муваффақиятли юкланди!`)
+                      showToast(`${allRows.length} та савдо маълумоти юкланди`)
+                    } catch(err) {
+                      setUploadStatus('❌ Хатолик: ' + err.message)
+                      showToast('Хатолик: ' + err.message, 'error')
+                    } finally {
+                      setSalesLoading(false)
+                      e.target.value = ''
+                    }
+                  }} />
+                </label>
+
+                <label style={LBL}>План-Факт файли</label>
+                <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
+                  <span style={{ fontSize:28 }}>📋</span>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Excel файлни танланг</div>
+                    <div style={{ fontSize:11, color:'#888' }}>План_факт файли</div>
+                  </div>
+                  <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
+                    const file = e.target.files[0]
+                    if (!file) return
+                    setSalesLoading(true)
+                    setUploadStatus('План-Факт файли ўқилмоқда...')
+                    try {
+                      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                      const buf = await file.arrayBuffer()
+                      const wb = XLSX.read(buf, { type:'array', cellDates:true })
+                      const ws = wb.Sheets['План факт '] || wb.Sheets['План факт'] || wb.Sheets[wb.SheetNames[0]]
+                      const raw = XLSX.utils.sheet_to_json(ws, { header:1 })
+                      const rows = []
+                      for (let i = 2; i < raw.length; i++) {
+                        const r = raw[i]
+                        if (!r || !r[0]) continue
+                        rows.push({
+                          menejer: r[0]?.toString()?.trim() || '',
+                          oy: r[1] ? Number(r[1]) : null,
+                          yil: new Date().getFullYear(),
+                          jamoa: r[2]?.toString()?.trim() || '',
+                          dori_nomi: r[3]?.toString()?.trim() || '',
+                          narx: r[4] ? Number(r[4]) : null,
+                          plan_miqdor: r[5] ? Number(r[5]) : null,
+                          sotish_a: r[6] ? Number(r[6]) : null,
+                          sotish_b: r[7] ? Number(r[7]) : null,
+                          jami_miqdor: r[8] ? Number(r[8]) : null,
+                          foiz: r[9] ? Number(r[9]) : null,
+                          plan_summa: r[10] ? Number(r[10]) : null,
+                          sotish_summa: r[11] ? Number(r[11]) : null,
+                        })
+                      }
+                      setUploadStatus(`${rows.length} та қатор топилди. Юкланмоқда...`)
+                      await uploadPlanFaktBatch(rows)
+                      setUploadStatus(`✅ ${rows.length} та план-факт маълумоти юкланди!`)
+                      showToast(`${rows.length} та план-факт юкланди`)
+                    } catch(err) {
+                      setUploadStatus('❌ Хатолик: ' + err.message)
+                      showToast('Хатолик: ' + err.message, 'error')
+                    } finally {
+                      setSalesLoading(false)
+                      e.target.value = ''
+                    }
+                  }} />
+                </label>
+
+                {uploadStatus && (
+                  <div style={{ background: uploadStatus.startsWith('✅') ? '#E8F5E9' : uploadStatus.startsWith('❌') ? '#FFEBEE' : '#FFF8E1', border:'1.5px solid', borderColor: uploadStatus.startsWith('✅') ? '#A5D6A7' : uploadStatus.startsWith('❌') ? '#FFCDD2' : '#FFE082', borderRadius:8, padding:'10px 14px', fontSize:13, fontWeight:600, color: uploadStatus.startsWith('✅') ? '#2E7D32' : uploadStatus.startsWith('❌') ? '#C62828' : '#7B5800' }}>
+                    {salesLoading && !uploadStatus.startsWith('✅') && !uploadStatus.startsWith('❌') ? '⏳ ' : ''}{uploadStatus}
+                  </div>
+                )}
+              </div>
+            </div>
+        )}
+
+        {/* REPORT TAB */}
+        {salesPage==='report' && (
+          <SalesReport
+            fetchSales={fetchSales}
+            showToast={showToast}
+            employees={employees}
+          />
+        )}
+
+        {/* PLAN FAKT TAB */}
+        {salesPage==='planfakt' && (
+          <PlanFaktReport
+            fetchPlanFakt={fetchPlanFakt}
+            showToast={showToast}
+          />
+         )}
+
+         {/* DASHBOARD TAB */}
+         {salesPage==='dashboard' && (
+           <SalesDashboard
+             fetchSales={fetchSales}
+             fetchPlanFakt={fetchPlanFakt}
+             showToast={showToast}
+           />
+          )}
+        </div>
+      )}
+      
       {toast && <Toast msg={toast.msg} type={toast.type} />}
     </div>
   )

@@ -1417,6 +1417,9 @@ export default function App() {
   const [salesLoading, setSalesLoading] = useState(false)
   const [salesFilter, setSalesFilter] = useState({ firma:'', yil:'', oy:'', savdo_vakili:'', jamoa:'' })
   const [uploadStatus, setUploadStatus] = useState('')
+  const [delYil, setDelYil] = useState('')
+  const [delOy, setDelOy] = useState('')
+  const [delFirma, setDelFirma] = useState('')
   const [addingPrak, setAddingPrak] = useState(false)
   const [editingPrak, setEditingPrak] = useState(null)
   const [newPrak, setNewPrak]     = useState({ title:'', date:'', description:'' })
@@ -2224,24 +2227,24 @@ export default function App() {
                 <div style={{ ...CARD, borderTop:'4px solid #C62828', marginTop:14 }}>
                   <div style={{ fontWeight:800, fontSize:15, marginBottom:6, color:'#C62828' }}>🗑️ Маълумотларни ўчириш</div>
                   <div style={{ fontSize:12, color:'#888', marginBottom:14 }}>Нотўғри юкланган маълумотларни ўчириш учун</div>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
                     <div>
                       <label style={LBL}>Йил</label>
-                      <select id="del-yil" style={{ ...SI, width:100 }}>
-                    <option value=''>—</option>
-                    {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+                      <select value={delYil} onChange={e=>setDelYil(e.target.value)} style={{ ...SI, width:100 }}>
+                        <option value=''>—</option>
+                        {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={LBL}>Ой</label>
-                      <select id="del-oy" style={{ ...SI, width:130 }}>
+                      <select value={delOy} onChange={e=>setDelOy(e.target.value)} style={{ ...SI, width:130 }}>
                         <option value=''>—</option>
                         {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={m}>{m}-ой</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={LBL}>Фирма</label>
-                      <select id="del-firma" style={{ ...SI, width:110 }}>
+                      <select value={delFirma} onChange={e=>setDelFirma(e.target.value)} style={{ ...SI, width:110 }}>
                         <option value=''>—</option>
                         {['PPS','IPS','RMF','PPHS-II'].map(f=><option key={f}>{f}</option>)}
                       </select>
@@ -2249,20 +2252,18 @@ export default function App() {
                   </div>
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                     <button onClick={async ()=>{
-                      const yil = document.getElementById('del-yil').value
-                      const oy = document.getElementById('del-oy').value
-                      const firma = document.getElementById('del-firma').value
-                      if (!yil && !oy && !firma) { showToast('Камида биттасини танланг', 'error'); return }
-                      if (!window.confirm(`Савдо: йил=${yil||'барча'}, ой=${oy||'барча'}, фирма=${firma||'барча'} ўчирилади. Тасдиқлайсизми?`)) return
+                      if (!delYil && !delOy && !delFirma) { showToast('Камида биттасини танланг', 'error'); return }
+                      if (!window.confirm(`Савдо: йил=${delYil||'барча'}, ой=${delOy||'барча'}, фирма=${delFirma||'барча'} ўчирилади?`)) return
                       try {
-                        await deleteSalesByFilter(yil, oy, firma)
+                        await deleteSalesByFilter(delYil, delOy, delFirma)
                         showToast('Савдо маълумотлари ўчирилди')
                         setUploadStatus('')
+                        setDelYil(''); setDelOy(''); setDelFirma('')
                       } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
                     }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ Савдони ўчириш</button>
 
                     <button onClick={async ()=>{
-                      if (!window.confirm('БАРЧА план-факт маълумотлари ўчирилади. Тасдиқлайсизми?')) return
+                      if (!window.confirm('БАРЧА план-факт маълумотлари ўчирилади?')) return
                       try {
                         await deleteAllPlanFakt()
                         showToast('План-факт ўчирилди')

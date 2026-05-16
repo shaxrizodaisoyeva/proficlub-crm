@@ -2086,8 +2086,7 @@ export default function App() {
             }
           </div>
         )}
-      </div>
-      {page==='sales' && (
+        {page==='sales' && (
         <div>
           {/* Tabs */}
           <div style={{ display:'flex', gap:6, marginBottom:18 }}>
@@ -2307,3 +2306,6 @@ export default function App() {
     </div>
   )
 }
+
+      </div>
+      

@@ -5,8 +5,8 @@ import {
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
   fetchPraktikum, createPraktikum, updatePraktikum, deletePraktikum,
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
-  fetchSales, uploadSalesBatch, deleteSalesByMonth,
-  fetchPlanFakt, uploadPlanFaktBatch, deletePlanFaktByMonth,
+  fetchSales, uploadSalesBatch, deleteSalesByFilter, deleteAllSales, deleteAllPlanFakt,
+  fetchPlanFakt, uploadPlanFaktBatch,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -1851,10 +1851,10 @@ export default function App() {
                                   </a>
                                   <button onClick={async ()=>{
                                     await updateEmployee(selEmp.id, { ...selEmp, promoList: '' })
-                                      setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,promoList:''}:e))
-                                      showToast('Файл ўчирилди')
-                                    }} style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Ўчириш</button>
-                                  </div>
+                                    setEmployees(p=>p.map(e=>e.id===selEmp.id?{...e,promoList:''}:e))
+                                    showToast('Файл ўчирилди')
+                                  }} style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Ўчириш</button>
+                                </div>
                                 : <div style={{ color:'#aaa', fontSize:12, marginBottom:8 }}>📭 Файл юкланмаган</div>
                               }
                               <label style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB' }}>
@@ -1920,35 +1920,37 @@ export default function App() {
                   })}
                 </div>
               )}
+
+              {empTab==='praktikum' && (
+                <div>
+                  {praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).length === 0
+                    ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:36 }}>
+                        <div style={{ fontSize:32, marginBottom:8 }}>⭐</div>
+                        <div>Ҳали практикумда иштирок этмаган</div>
+                      </div>
+                    : praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).map(pr=>{
+                        const p = (pr.praktikum_participants||[]).find(x=>x.employee_id===selEmp.id)
+                        return (
+                          <div key={pr.id} style={{ ...CARD, borderLeft:`4px solid ${p?.star?'#F59E0B':'#E0E0E0'}` }}>
+                            <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{pr.title}</div>
+                            <div style={{ fontSize:12, color:'#888', marginBottom:8 }}>{pr.date}</div>
+                            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                              {p?.star && <span style={{ background:'#FFFBEB', color:'#B45309', borderRadius:8, padding:'2px 10px', fontSize:12, fontWeight:700 }}>⭐ Практикумда</span>}
+                              {p?.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
+                              {p?.homework_url && <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name}</a>}
+                            </div>
+                            {p?.feedback && <div style={{ fontSize:13, color:'#555', marginTop:8, background:'#F8F9FA', borderRadius:8, padding:'7px 10px' }}>💬 {p.feedback}</div>}
+                          </div>
+                        )
+                      })
+                  }
+                </div>
+              )}
             </div>
           )
         })()}
 
-        {empTab==='praktikum' && (
-          <div>
-            {praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).length === 0
-              ? <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:36 }}>
-                  <div style={{ fontSize:32, marginBottom:8 }}>⭐</div>
-                  <div>Ҳали практикумда иштирок этмаган</div>
-                </div>
-              : praktikums.filter(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id)).map(pr=>{
-                  const p = (pr.praktikum_participants||[]).find(x=>x.employee_id===selEmp.id)
-                  return (
-                    <div key={pr.id} style={{ ...CARD, borderLeft:`4px solid ${p?.star?'#F59E0B':'#E0E0E0'}` }}>
-                      <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{pr.title}</div>
-                      <div style={{ fontSize:12, color:'#888', marginBottom:8 }}>{pr.date}</div>
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        {p?.star && <span style={{ background:'#FFFBEB', color:'#B45309', borderRadius:8, padding:'2px 10px', fontSize:12, fontWeight:700 }}>⭐ Практикумда</span>}
-                        {p?.grade != null && <span style={{ background:scoreBg(p.grade), color:scoreColor(p.grade), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{p.grade} балл</span>}
-                        {p?.homework_url && <a href={p.homework_url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#1976D2', fontWeight:700, textDecoration:'none' }}>📎 {p.homework_name}</a>}
-                      </div>
-                      {p?.feedback && <div style={{ fontSize:13, color:'#555', marginTop:8, background:'#F8F9FA', borderRadius:8, padding:'7px 10px' }}>💬 {p.feedback}</div>}
-                    </div>
-                  )
-              })
-            }
-          </div>
-        )}
+        {page==='employees' && !selEmp && !adding && (
 
         {page==='employees' && !selEmp && !adding && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80%', color:'#ccc' }}>

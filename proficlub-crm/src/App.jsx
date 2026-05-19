@@ -1611,12 +1611,12 @@ export default function App() {
 
   function handleBulkSaved() { setBulkMode(false); load() }
   function goToEmployee(id) { setSelected(id); setEmpTab('exams'); setPage('employees'); setBulkMode(false) }
-  const navBtn = active => ({ padding:'8px 14px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:13 })
+  const navBtn = active => ({ padding:'6px 10px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:12 })
 
   return (
     <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
       {/* SIDEBAR */}
-      <div style={{ width:272, minWidth:272, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
+      <div style={{ width:'22%', minWidth:200, maxWidth:280, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>
@@ -1758,7 +1758,7 @@ export default function App() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div style={{ flex:1, overflowY:'auto', padding:22 }}>
+      <div style={{ flex:1, overflowY:'auto', padding:'16px 18px' }}>
 
         {/* Add employee */}
         {adding && (

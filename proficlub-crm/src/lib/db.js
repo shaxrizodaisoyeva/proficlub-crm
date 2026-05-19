@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-deleteSalesByFilter, deleteAllSales, deleteAllPlanFakt,
 // ── EMPLOYEES ────────────────────────────────────────────────────────────────
 
 export async function fetchEmployees() {

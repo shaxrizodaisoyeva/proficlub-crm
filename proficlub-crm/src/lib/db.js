@@ -261,13 +261,6 @@ export async function uploadPlanFaktBatch(rows) {
   }
 }
 
-export async function deletePlanFaktByMonth(yil, oy) {
-  const { error } = await supabase.from('plan_fakt')
-    .delete()
-    .eq('yil', yil)
-    .eq('oy', oy)
-  if (error) throw error
-}
 export async function deleteSalesByFilter(yil, oy, firma) {
   let query = supabase.from('sales').delete()
   if (yil) query = query.eq('yil', Number(yil))

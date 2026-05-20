@@ -1614,9 +1614,9 @@ export default function App() {
   const navBtn = active => ({ padding:'6px 10px', background:active?'#1976D2':'transparent', color:active?'#fff':'#555', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:12 })
 
   return (
-    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E' }}>
+    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#F5F7FA', color:'#1A1A2E', overflow:'hidden' }}>
       {/* SIDEBAR */}
-      <div style={{ width:'22%', minWidth:200, maxWidth:280, background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column' }}>
+      <div style={{ width:'clamp(200px, 20vw, 300px)', background:'#fff', borderRight:'1.5px solid #EBEBEB', display:'flex', flexDirection:'column', flexShrink:0 }}>
         <div style={{ padding:'16px 14px 12px', borderBottom:'1.5px solid #EBEBEB' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
             <div style={{ width:34, height:34, borderRadius:9, background:'linear-gradient(135deg,#1565C0,#42A5F5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💊</div>

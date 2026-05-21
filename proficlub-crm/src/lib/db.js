@@ -93,11 +93,9 @@ export async function saveBulkExamResults(training, updates) {
     const newResult = {
       trainingId: training.id,
       date: training.date,
-      mcScore: update.score,
-      totalScore: update.score,
+      mcScore: update.score ?? 0,
+      totalScore: update.score ?? 0,
       passed: update.score != null && update.score >= 60,
-      totalScore: update.score || 0,
-      mcScore: update.score || 0,
       homeworkUrl: update.homeworkUrl || '',
       homeworkName: update.homeworkName || '',
       openAnswers: update.openAnswers ?? [],

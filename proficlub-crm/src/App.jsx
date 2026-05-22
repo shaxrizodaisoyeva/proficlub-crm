@@ -1951,8 +1951,6 @@ export default function App() {
         })()}
 
         {page==='employees' && !selEmp && !adding && (
-
-        {page==='employees' && !selEmp && !adding && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80%', color:'#ccc' }}>
             <div style={{ fontSize:48, marginBottom:10 }}>👈</div>
             <div style={{ fontSize:15, fontWeight:600 }}>Ходимни танланг</div>

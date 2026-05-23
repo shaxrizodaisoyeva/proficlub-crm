@@ -1,12 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
-import EmployeePortal from './EmployeePortal.jsx'
+import Register from './Register.jsx'
 
 const path = window.location.pathname
+const root = ReactDOM.createRoot(document.getElementById('root'))
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    {path.startsWith('/portal') ? <EmployeePortal /> : <App />}
-  </React.StrictMode>
-)
+if (path === '/register') {
+  root.render(<Register />)
+} else {
+  root.render(<App />)
+}

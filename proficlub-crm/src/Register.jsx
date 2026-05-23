@@ -183,7 +183,7 @@ export default function Register() {
         </div>
 
         <button
-          onClick={() => { if (name.trim()) setStep(3) else setError('Исм-фамилия киритинг') }}
+          onClick={() => { if (name.trim()) { setStep(3) } else { setError('Исм-фамилия киритинг') } }}
           disabled={!name.trim()}
           style={{ width: '100%', padding: '14px', background: name.trim() ? `linear-gradient(135deg, ${roleInfo?.color}, #42A5F5)` : '#E0E0E0', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: name.trim() ? 'pointer' : 'not-allowed', marginTop: 16, fontFamily: 'inherit' }}>
           Давом этиш →

@@ -122,7 +122,6 @@ export default function Register() {
         data: {
           ...rest,
           organization: organization || '',
-          status: 'pending',
         },
       })
       setStep(4)

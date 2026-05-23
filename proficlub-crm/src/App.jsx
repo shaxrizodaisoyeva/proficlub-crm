@@ -10,6 +10,7 @@ import {
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
+
 const ROLES = ['Менежер','Савдо вакили','Оператор','Ҳайдовчи','Таҳлилчи','Администратор']
 const ROLE_COLORS = {
   'Менежер':       { bg:'#E8F4FD', text:'#1565C0', dot:'#1976D2' },
@@ -1423,6 +1424,7 @@ export default function App() {
   const [addingPrak, setAddingPrak] = useState(false)
   const [editingPrak, setEditingPrak] = useState(null)
   const [newPrak, setNewPrak]     = useState({ title:'', date:'', description:'' })
+  const [showQR, setShowQR] = useState(null)
 
   const showToast = useCallback((msg, type='success') => {
     setToast({ msg, type })
@@ -1544,6 +1546,7 @@ export default function App() {
       }
       setAddingTr(false)
       setNewTr({ title:'', date:'', questions:[''] })
+      setShowQR({ type:'training', id: editingTraining ? editingTraining.id : created.id, title: newTr.title })
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
@@ -2320,6 +2323,36 @@ export default function App() {
       )}
       </div>
 
+      {showQR && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#fff', borderRadius:20, padding:28, maxWidth:380, width:'100%', textAlign:'center', boxShadow:'0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize:13, color:'#888', marginBottom:6, textTransform:'uppercase', fontWeight:700, letterSpacing:0.5 }}>QR Код — Давомат</div>
+            <h2 style={{ margin:'0 0 16px', fontSize:18 }}>{showQR.title}</h2>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=1B5E20&bgcolor=ffffff&data=${encodeURIComponent(`https://proficlub-crm.vercel.app/attendance/${showQR.type}/${showQR.id}`)}`}
+              width={220} height={220}
+              alt="QR"
+              style={{ borderRadius:12, border:'1.5px solid #E0E0E0' }}
+            />
+            <div style={{ fontSize:12, color:'#aaa', marginTop:10, marginBottom:16, wordBreak:'break-all' }}>
+              proficlub-crm.vercel.app/attendance/{showQR.type}/{showQR.id}
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+        
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&color=1B5E20&bgcolor=ffffff&data=${encodeURIComponent(`https://proficlub-crm.vercel.app/attendance/${showQR.type}/${showQR.id}`)}`}
+                download={`qr_${showQR.title}.png`}
+                style={{ flex:1, padding:'12px', background:'#E8F5E9', color:'#1B5E20', borderRadius:12, fontWeight:700, fontSize:13, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
+                📥 Юклаш
+              </a>
+              <button onClick={()=>setShowQR(null)}
+                style={{ flex:1, padding:'12px', background:'#F5F7FA', color:'#555', border:'1.5px solid #E0E0E0', borderRadius:12, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                ✕ Ёпиш
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {toast && <Toast msg={toast.msg} type={toast.type} />}
     </div>
   )

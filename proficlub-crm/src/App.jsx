@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
-  fetchEmployees, createEmployee, updateEmployee, deleteEmployee,
+  fetchEmployees, createEmployee, updateEmployee, deleteEmployee, fetchEmployeesWithId,
   fetchTrainings, createTraining, deleteTraining, saveBulkExamResults,
   fetchSessions, createSession, deleteSession, saveSessionParticipants,
   fetchPraktikum, createPraktikum, updatePraktikum, deletePraktikum,
@@ -1636,6 +1636,23 @@ export default function App() {
             <button style={navBtn(page==='exams')} onClick={()=>{ setPage('exams'); setBulkMode(false) }}>📋 Тренинглар</button>
             <button style={navBtn(page==='praktikum')} onClick={()=>{ setPage('praktikum'); setBulkMode(false) }}>⭐ Практикум</button>
             <button style={navBtn(page==='sales')} onClick={()=>{ setPage('sales'); setBulkMode(false) }}>📈 Савдо</button>
+                  <button style={navBtn(false)} onClick={async ()=>{
+                    const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                    const { data } = await supabase.from('employees').select('emp_id, name, role, data').order('emp_id')
+                    const rows = data.map(e => ({
+                      'ID': e.emp_id,
+                      'Исм-фамилия': e.name,
+                      'Лавозим': e.role,
+                      'Ташкилот': e.data?.organization || '',
+                      'Телефон': e.data?.phone || '',
+                      'Ҳудуд': e.data?.region || '',
+                    }))
+                    const ws = XLSX.utils.json_to_sheet(rows)
+                    ws['!cols'] = [{wch:6},{wch:28},{wch:16},{wch:10},{wch:16},{wch:16}]
+                    const wb = XLSX.utils.book_new()
+                    XLSX.utils.book_append_sheet(wb, ws, 'Ходимлар рееstри')
+                    XLSX.writeFile(wb, 'proficlub_reestr.xlsx')
+                 }}>📋 Рееstr</button>
           </div>
         </div>
 

@@ -2301,7 +2301,8 @@ export default function App() {
           )}
         </div>
       )}
-      
+      </div>
+
       {toast && <Toast msg={toast.msg} type={toast.type} />}
     </div>
   )

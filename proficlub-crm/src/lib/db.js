@@ -277,3 +277,12 @@ export async function deleteAllPlanFakt() {
   const { error } = await supabase.from('plan_fakt').delete().neq('id', 0)
   if (error) throw error
 }
+
+export async function fetchEmployeesWithId() {
+  const { data, error } = await supabase
+    .from('employees')
+    .select('id, name, role, emp_id, data')
+    .order('emp_id')
+  if (error) throw error
+  return data
+}

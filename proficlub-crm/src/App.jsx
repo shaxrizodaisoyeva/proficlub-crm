@@ -1652,7 +1652,7 @@ export default function App() {
                     const wb = XLSX.utils.book_new()
                     XLSX.utils.book_append_sheet(wb, ws, 'Ходимлар рееstри')
                     XLSX.writeFile(wb, 'proficlub_reestr.xlsx')
-                 }}>📋 Рееstr</button>
+                 }}>🪪 ID</button>
           </div>
         </div>
 

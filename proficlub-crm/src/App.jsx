@@ -2343,7 +2343,7 @@ export default function App() {
                 download={'qr_' + showQR.title + '.png'}
                 style={{ flex:1, padding:'12px', background:'#E8F5E9', color:'#1B5E20', borderRadius:12, fontWeight:700, fontSize:13, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
                 📥 Юклаш
-              </a>
+              
               <button onClick={()=>setShowQR(null)}
                 style={{ flex:1, padding:'12px', background:'#F5F7FA', color:'#555', border:'1.5px solid #E0E0E0', borderRadius:12, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 ✕ Ёпиш

@@ -1529,6 +1529,8 @@ export default function App() {
   async function handleAddTraining() {
     if (!newTr.title.trim()) return
     setSaving(true)
+    let savedId = null          // ← QO'SHING
+    let savedTitle = newTr.title  // ← QO'SHING
     try {
       if (editingTraining) {
         const questions = newTr.questions.filter(q=>q.trim())
@@ -1537,16 +1539,18 @@ export default function App() {
         setTrainings(p => p.map(t => t.id === editingTraining.id ? { ...t, title:newTr.title, date:newTr.date, questions } : t))
         setSelTraining(prev => ({ ...prev, title:newTr.title, date:newTr.date, questions }))
         showToast(`"${newTr.title}" янгиланди`)
+        savedId = editingTraining.id   // ← QO'SHING
         setEditingTraining(null)
       } else {
         const created = await createTraining({ ...newTr, questions:newTr.questions.filter(q=>q.trim()) })
         setTrainings(p=>[created,...p])
         setSelTraining(created)
         showToast(`"${created.title}" тренинги яратилди`)
+        savedId = created.id           // ← QO'SHING
       }
       setAddingTr(false)
       setNewTr({ title:'', date:'', questions:[''] })
-      setShowQR({ type:'training', id: editingTraining ? editingTraining.id : created.id, title: newTr.title })
+      setShowQR({ type:'training', id: savedId, title: savedTitle })  // ← O'ZGARTIRING
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }

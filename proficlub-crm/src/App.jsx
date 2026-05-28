@@ -2329,18 +2329,18 @@ export default function App() {
             <div style={{ fontSize:13, color:'#888', marginBottom:6, textTransform:'uppercase', fontWeight:700, letterSpacing:0.5 }}>QR Код — Давомат</div>
             <h2 style={{ margin:'0 0 16px', fontSize:18 }}>{showQR.title}</h2>
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=1B5E20&bgcolor=ffffff&data=${encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}`}
+              src={'https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=1B5E20&bgcolor=ffffff&data=' + encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}
               width={220} height={220}
               alt="QR"
               style={{ borderRadius:12, border:'1.5px solid #E0E0E0' }}
             />
             <div style={{ fontSize:12, color:'#aaa', marginTop:10, marginBottom:16, wordBreak:'break-all' }}>
-              proficlub-crm.vercel.app/attendance/{showQR.type}/{showQR.id}
+              {'proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id}
             </div>
             <div style={{ display:'flex', gap:8 }}>
         
-                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&color=1B5E20&bgcolor=ffffff&data=${encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}`}
-                download={`qr_${showQR.title}.png`}
+                href={'https://api.qrserver.com/v1/create-qr-code/?size=500x500&color=1B5E20&bgcolor=ffffff&data=' + encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}
+                download={'qr_' + showQR.title + '.png'}
                 style={{ flex:1, padding:'12px', background:'#E8F5E9', color:'#1B5E20', borderRadius:12, fontWeight:700, fontSize:13, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
                 📥 Юклаш
               </a>

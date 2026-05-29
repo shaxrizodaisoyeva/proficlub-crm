@@ -169,6 +169,83 @@ function DonutChart({ passed, failed }) {
 }
 
 // ── PRAKTIKUM DASHBOARD ───────────────────────────────────────────────────────
+
+async function exportTrainingsExcel(trainingsList, sessionsList, employees, filterType = 'all', selectedIds = [], showToast) {
+  try {
+    const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    let targets = trainingsList;
+    let fileNameToken = "barcha_treninglar";
+    if (filterType === 'single' && selectedIds.length > 0) {
+      targets = trainingsList.filter(t => t.id === selectedIds[0]);
+      fileNameToken = `trening_${targets[0]?.title || 'id'}`;
+    } else if (filterType === 'multi' && selectedIds.length > 0) {
+      targets = trainingsList.filter(t => selectedIds.includes(t.id));
+      fileNameToken = "tanlangan_treninglar";
+    }
+    const excelRows = employees.map(emp => {
+      const entry = { 'Ходим Исми': emp.name, 'Лавозими': emp.role, 'Ташкилот': emp.organization || '—' };
+      let attendedCount = 0;
+      targets.forEach(t => {
+        const associatedSessions = sessionsList.filter(s => s.training_id === t.id);
+        let attendedThisTraining = false;
+        associatedSessions.forEach(s => {
+          const participants = s.session_participants || [];
+          if (participants.some(p => p.employee_id === emp.id && p.attended)) { attendedThisTraining = true; }
+        });
+        if (attendedThisTraining) attendedCount++;
+        entry[t.title] = attendedThisTraining ? 'Қатнашди' : 'Қатнашмади';
+      });
+      entry['Жами Иштирок сони'] = `${attendedCount} / ${targets.length}`;
+      return entry;
+    });
+    const ws = XLSX.utils.json_to_sheet(excelRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Давомат Ҳисоботи');
+    XLSX.writeFile(wb, `davomat_${fileNameToken}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    if (showToast) showToast('Excel ҳисобот муваффақиятли юкланди!');
+  } catch (e) { if (showToast) showToast('Excel экспортда хатолик: ' + e.message, 'error'); }
+}
+
+async function exportPraktikumExcel(prak, showToast) {
+  try {
+    const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    const participants = prak.praktikum_participants || [];
+    const rows = participants.map((p, idx) => {
+      const emp = p.employees || {};
+      return {
+        'Т/р': idx + 1,
+        'Иштирокчи Исми': emp.name || '—',
+        'Лавозими': emp.role || '—',
+        'Ташкилот': emp.organization || '—',
+        'Балл': p.grade != null ? p.grade : 'Баҳоланмаган',
+        'Ҳолати': p.star ? '⭐ Актив Практикумда' : 'Чиқди',
+        'Фидбек': p.feedback || '—'
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Практикум Иштирокчилари');
+    XLSX.writeFile(wb, `praktikum_${prak.title.toLowerCase().replace(/\s+/g, '_')}_hisobot.xlsx`);
+    if (showToast) showToast('Практикум Excel жадвали юкланди!');
+  } catch (e) { if (showToast) showToast('Хатолик юз берди: ' + e.message, 'error'); }
+}
+
+async function exportDashboardToPDF(elementId, titleToken = 'Dashboard') {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  try {
+    const html2pdf = (await import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).default;
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `dashboard_${titleToken.toLowerCase().replace(/\s+/g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    html2pdf().set(opt).from(element).save();
+  } catch (err) { window.print(); }
+}
+
 function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, showToast }) {
   const [addingEmp, setAddingEmp] = useState(false)
   const [empSearch, setEmpSearch] = useState('')
@@ -227,7 +304,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
   )
 
   return (
-    <div>
+    <div id={`praktikum-container-pane-${prak.id}`}>
       {/* Header */}
       <div style={{ ...CARD, borderTop:'4px solid #F59E0B' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:10 }}>
@@ -239,6 +316,12 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
           </div>
           <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
             <button onClick={()=>setAddingEmp(true)} style={{ ...BTN('#F59E0B') }}>+ Иштирокчи қўшиш</button>
+            <button type="button" onClick={() => exportPraktikumExcel(prak, showToast)} style={{ ...BTN('#388E3C'), marginLeft: 6 }}>
+              📥 Excel Журнал
+            </button>
+            <button type="button" onClick={() => exportDashboardToPDF(`praktikum-container-pane-${prak.id}`, prak.title)} style={{ ...BTN('#7B1FA2'), marginLeft: 6 }}>
+              📄 PDF Ҳисобот
+            </button>
             <button onClick={()=>onEdit(prak)} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB' }}>✏️ Таҳрирлаш</button>
             <button onClick={()=>onDelete(prak.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
           </div>

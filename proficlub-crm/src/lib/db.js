@@ -306,3 +306,52 @@ export async function updateSalesMappingRow(id, fields) {
   const { error } = await supabase.from('sales_mapping').update(fields).eq('id', id)
   if (error) throw error
 }
+
+export async function updateEmployeeSalesStats() {
+  // Fetch all sales (savdo only, last 6 months)
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  const fromDate = sixMonthsAgo.toISOString().split('T')[0]
+
+  const { data: sales } = await supabase
+    .from('sales')
+    .select('crm_savdo_vakili, crm_menejer, summa, sana')
+    .neq('tur', 'vozvrat')
+    .gte('sana', fromDate)
+    .eq('is_mapped', true)
+
+  if (!sales?.length) return
+
+  // Group by savdo vakili
+  const byVakil = {}
+  for (const s of sales) {
+    const key = s.crm_savdo_vakili
+    if (!key) continue
+    if (!byVakil[key]) byVakil[key] = 0
+    byVakil[key] += s.summa || 0
+  }
+
+  // Group by menejer
+  const byMenejer = {}
+  for (const s of sales) {
+    const key = s.crm_menejer
+    if (!key) continue
+    if (!byMenejer[key]) byMenejer[key] = 0
+    byMenejer[key] += s.summa || 0
+  }
+
+  // Fetch all employees
+  const { data: emps } = await supabase.from('employees').select('id, name, data')
+
+  for (const emp of emps || []) {
+    const vakilSales = byVakil[emp.name]
+    const menejerSales = byMenejer[emp.name]
+    const totalSales = (vakilSales || 0) + (menejerSales || 0)
+    if (totalSales > 0) {
+      const avg = Math.round(totalSales / 6)
+      await supabase.from('employees').update({
+        data: { ...emp.data, sales6Month: avg.toLocaleString() + ' сўм' }
+      }).eq('id', emp.id)
+    }
+  }
+}

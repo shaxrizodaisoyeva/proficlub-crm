@@ -7,6 +7,7 @@ import {
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
   fetchSales, uploadSalesBatch, deleteSalesByFilter, deleteAllSales, deleteAllPlanFakt,
   fetchPlanFakt, uploadPlanFaktBatch,
+  uploadSalesMapping, fetchSalesMapping, updateSalesMappingRow,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -493,24 +494,151 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
 }
 
 // ── SALES REPORT ─────────────────────────────────────────────────────────────
-function SalesReport({ fetchSales, showToast, employees }) {
+function SalesMappingPage({ showToast }) {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState(null)
+  const [editVals, setEditVals] = useState({})
+  const [filterUnmapped, setFilterUnmapped] = useState(false)
+
+  useEffect(() => { loadData() }, [])
+
+  async function loadData() {
+    setLoading(true)
+    try {
+      const { data: rows, error } = await supabase.from('sales_mapping').select('*').order('region').order('komanda')
+      if (error) throw error
+      setData(rows || [])
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    finally { setLoading(false) }
+  }
+
+  async function handleSave(id) {
+    try {
+      const isMapped = !!(editVals.crm_menejer?.trim() && editVals.crm_savdo_vakili?.trim())
+      await supabase.from('sales_mapping').update({ ...editVals, is_mapped: isMapped }).eq('id', id)
+
+      // Also update sales table
+      if (isMapped) {
+        const row = data.find(d => d.id === id)
+        await supabase.from('sales').update({
+          crm_menejer: editVals.crm_menejer,
+          crm_savdo_vakili: editVals.crm_savdo_vakili,
+          is_mapped: true,
+        }).eq('savdo_vakili', row.med_pred).eq('jamoa', row.komanda)
+      }
+
+      setEditingId(null)
+      await loadData()
+      showToast('Сақланди')
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  const displayed = filterUnmapped ? data.filter(d => !d.is_mapped) : data
+  const unmappedCount = data.filter(d => !d.is_mapped).length
+
+  if (loading) return <Spinner />
+
+  return (
+    <div>
+      <div style={{ ...CARD, borderTop:'4px solid #9C27B0' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10, marginBottom:14 }}>
+          <div>
+            <div style={{ fontWeight:800, fontSize:15 }}>🗂️ Савдо вакиллари мослаштириш</div>
+            <div style={{ fontSize:13, color:'#888', marginTop:4 }}>
+              Жами: {data.length} та · 
+              <span style={{ color:'#C62828', fontWeight:700 }}> {unmappedCount} та мосланмаган</span> · 
+              <span style={{ color:'#2E7D32', fontWeight:700 }}> {data.length - unmappedCount} та мосланган</span>
+            </div>
+          </div>
+          <button onClick={() => setFilterUnmapped(p => !p)}
+            style={{ ...BTN(filterUnmapped ? '#C62828' : '#F5F7FA', filterUnmapped ? '#fff' : '#555'), border:'1.5px solid #E0E0E0' }}>
+            {filterUnmapped ? '🔴 Фақат мосланмаганлар' : 'Барчаси кўрсатиш'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ ...CARD, padding:0, overflow:'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+          <thead>
+            <tr style={{ background:'#F5F7FA', position:'sticky', top:0 }}>
+              {['Ҳудуд','Жамоа','Мед. вакил (файлда)','Йетказиб берувчи','CRM Менежер','CRM Савдо вакили','Ҳолат',''].map(h=>(
+                <th key={h} style={{ padding:'10px 12px', textAlign:'left', fontWeight:700, fontSize:10, color:'#888', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayed.map(row => {
+              const isEditing = editingId === row.id
+              const bg = row.is_mapped ? 'transparent' : 'rgba(239,83,80,0.06)'
+              return (
+                <tr key={row.id} style={{ borderTop:'1px solid #F0F0F0', background: isEditing ? '#FFFDE7' : bg }}>
+                  <td style={{ padding:'8px 12px', color:'#555' }}>{row.region}</td>
+                  <td style={{ padding:'8px 12px', fontWeight:600 }}>{row.komanda}</td>
+                  <td style={{ padding:'8px 12px' }}>{row.med_pred}</td>
+                  <td style={{ padding:'8px 12px', color:'#888' }}>{row.postavshik}</td>
+                  <td style={{ padding:'8px 12px' }}>
+                    {isEditing
+                      ? <input value={editVals.crm_menejer || ''} onChange={e=>setEditVals(p=>({...p, crm_menejer: e.target.value}))}
+                          style={{ ...SI, fontSize:12 }} placeholder="Менежер исм-фамилияси" />
+                      : <span style={{ color: row.crm_menejer ? '#1A1A2E' : '#C62828', fontStyle: row.crm_menejer ? 'normal' : 'italic' }}>
+                          {row.crm_menejer || 'Киритилмаган'}
+                        </span>
+                    }
+                  </td>
+                  <td style={{ padding:'8px 12px' }}>
+                    {isEditing
+                      ? <input value={editVals.crm_savdo_vakili || ''} onChange={e=>setEditVals(p=>({...p, crm_savdo_vakili: e.target.value}))}
+                          style={{ ...SI, fontSize:12 }} placeholder="Савдо вакили исм-фамилияси" />
+                      : <span style={{ color: row.crm_savdo_vakili ? '#1A1A2E' : '#C62828', fontStyle: row.crm_savdo_vakili ? 'normal' : 'italic' }}>
+                          {row.crm_savdo_vakili || 'Киритилмаган'}
+                        </span>
+                    }
+                  </td>
+                  <td style={{ padding:'8px 12px' }}>
+                    <span style={{ background: row.is_mapped ? '#E8F5E9' : '#FFEBEE', color: row.is_mapped ? '#2E7D32' : '#C62828', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>
+                      {row.is_mapped ? '✓ Мосланган' : '✗ Мосланмаган'}
+                    </span>
+                  </td>
+                  <td style={{ padding:'8px 12px' }}>
+                    {isEditing
+                      ? <div style={{ display:'flex', gap:4 }}>
+                          <button onClick={() => handleSave(row.id)} style={{ ...BTN('#388E3C'), padding:'4px 10px', fontSize:11 }}>✅</button>
+                          <button onClick={() => setEditingId(null)} style={{ ...BTN('#F5F7FA','#555'), padding:'4px 10px', fontSize:11, border:'1.5px solid #ddd' }}>✕</button>
+                        </div>
+                      : <button onClick={() => { setEditingId(row.id); setEditVals({ crm_menejer: row.crm_menejer, crm_savdo_vakili: row.crm_savdo_vakili }) }}
+                          style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB', padding:'4px 10px', fontSize:11 }}>✏️</button>
+                    }
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function SalesReport({ fetchSales, showToast }) {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
-  const [filters, setFilters] = useState({ firma:'', yil:'', oy:'', savdo_vakili:'', jamoa:'', tur:'' })
+  const [filters, setFilters] = useState({ yonalish:'', yil:'', oy:'', savdo_vakili:'', jamoa:'', onlyUnmapped:false })
   const [loaded, setLoaded] = useState(false)
 
   async function load() {
     setLoading(true)
     try {
-      const f = {}
-      if (filters.firma) f.firma = filters.firma
-      if (filters.yil) f.yil = Number(filters.yil)
-      if (filters.oy) f.oy = Number(filters.oy)
-      if (filters.savdo_vakili) f.savdo_vakili = filters.savdo_vakili
-      if (filters.jamoa) f.jamoa = filters.jamoa
-      if (filters.tur) f.tur = filters.tur
-      const res = await fetchSales(f)
-      setData(res)
+      let query = supabase.from('sales').select('*').neq('tur','vozvrat').order('sana', { ascending: false })
+      if (filters.yonalish) query = query.eq('yonalish', filters.yonalish)
+      if (filters.yil) query = query.eq('yil', Number(filters.yil))
+      if (filters.oy) query = query.eq('oy', Number(filters.oy))
+      if (filters.savdo_vakili) query = query.ilike('savdo_vakili', '%' + filters.savdo_vakili + '%')
+      if (filters.jamoa) query = query.ilike('jamoa', '%' + filters.jamoa + '%')
+      if (filters.onlyUnmapped) query = query.eq('is_mapped', false)
+      const { data: res, error } = await query
+      if (error) throw error
+      setData(res || [])
       setLoaded(true)
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
     finally { setLoading(false) }
@@ -520,69 +648,64 @@ function SalesReport({ fetchSales, showToast, employees }) {
     try {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const ws = XLSX.utils.json_to_sheet(data.map(r=>({
-        'Фирма': r.firma, 'Йил': r.yil, 'Ой': r.oy, 'Сана': r.sana,
-        'Ҳисоб-фактура': r.hisob_faktura, 'Савдо вакили': r.savdo_vakili,
-        'Шаҳар': r.shahar, 'Жамоа': r.jamoa, 'Йетказиб берувчи': r.yetkazib_beruvchi,
-        'Ташкилот': r.tashkilot, 'Ишлаб чиқарувчи': r.ishlab_chiqaruvchi,
-        'Дори номи': r.dori_nomi, 'Миқдор': r.miqdor,
-        'Нарх': r.narx, 'Сумма': r.summa, 'Тур': r.tur,
+        'Сана': r.sana,
+        'Йўналиш': r.yonalish,
+        'Шаҳар': r.shahar,
+        'Жамоа (CRM)': r.crm_menejer || r.jamoa,
+        'Савдо вакили (CRM)': r.crm_savdo_vakili || r.savdo_vakili,
+        'Дори номи': r.dori_nomi,
+        'Миқдор': r.miqdor,
+        'Нарх': r.narx,
+        'Сумма': r.summa,
+        'Мосланган': r.is_mapped ? 'Ҳа' : 'Йўқ',
       })))
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Савдо')
-      XLSX.writeFile(wb, `savdo_hisobot_${filters.yil||'jami'}_${filters.oy||'hammasi'}.xlsx`)
+      XLSX.writeFile(wb, 'savdo_hisobot.xlsx')
     } catch(e) { showToast('Export хатолик: ' + e.message, 'error') }
   }
 
-  const totalSumma = data.filter(r=>r.tur!=='vozvrat').reduce((s,r)=>s+(r.summa||0),0)
-  const vozvratSumma = data.filter(r=>r.tur==='vozvrat').reduce((s,r)=>s+(r.summa||0),0)
-  const netSumma = totalSumma + vozvratSumma
+  const totalSumma = data.reduce((s,r) => s + (r.summa||0), 0)
 
   return (
     <div>
       <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
         <div style={{ fontWeight:800, fontSize:15, marginBottom:14 }}>📋 Савдо Ҳисоботи</div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
-          <div>
-            <label style={LBL}>Фирма</label>
-            <select value={filters.firma} onChange={e=>setFilters(p=>({...p,firma:e.target.value}))} style={{ ...SI, width:120 }}>
+          <div><label style={LBL}>Йўналиш</label>
+            <select value={filters.yonalish} onChange={e=>setFilters(p=>({...p,yonalish:e.target.value}))} style={{ ...SI, width:120 }}>
               <option value=''>Барчаси</option>
-              {['PPS','IPS','RMF','PPHS-II'].map(f=><option key={f}>{f}</option>)}
+              {['PPS','IPS','RMF','PPHS-II','SAVA'].map(f=><option key={f}>{f}</option>)}
             </select>
           </div>
-          <div>
-            <label style={LBL}>Йил</label>
+          <div><label style={LBL}>Йил</label>
             <select value={filters.yil} onChange={e=>setFilters(p=>({...p,yil:e.target.value}))} style={{ ...SI, width:100 }}>
               <option value=''>Барчаси</option>
               {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
             </select>
           </div>
-          <div>
-            <label style={LBL}>Ой</label>
-            <select value={filters.oy} onChange={e=>setFilters(p=>({...p,oy:e.target.value}))} style={{ ...SI, width:110 }}>
+          <div><label style={LBL}>Ой</label>
+            <select value={filters.oy} onChange={e=>setFilters(p=>({...p,oy:e.target.value}))} style={{ ...SI, width:130 }}>
               <option value=''>Барчаси</option>
               {['1-Январь','2-Февраль','3-Март','4-Апрель','5-Май','6-Июнь','7-Июль','8-Август','9-Сентябрь','10-Октябрь','11-Ноябрь','12-Декабрь'].map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
             </select>
           </div>
-          <div>
-            <label style={LBL}>Тур</label>
-            <select value={filters.tur} onChange={e=>setFilters(p=>({...p,tur:e.target.value}))} style={{ ...SI, width:120 }}>
-              <option value=''>Барчаси</option>
-              <option value='savdo'>Савдо</option>
-              <option value='vozvrat'>Қайтариш</option>
-            </select>
-          </div>
-          <div>
-            <label style={LBL}>Савдо вакили</label>
+          <div><label style={LBL}>Савдо вакили</label>
             <input value={filters.savdo_vakili} onChange={e=>setFilters(p=>({...p,savdo_vakili:e.target.value}))} placeholder="Исм..." style={{ ...SI, width:150 }} />
           </div>
-          <div>
-            <label style={LBL}>Жамоа</label>
+          <div><label style={LBL}>Жамоа</label>
             <input value={filters.jamoa} onChange={e=>setFilters(p=>({...p,jamoa:e.target.value}))} placeholder="Жамоа..." style={{ ...SI, width:150 }} />
+          </div>
+          <div style={{ display:'flex', alignItems:'flex-end', paddingBottom:2 }}>
+            <button onClick={()=>setFilters(p=>({...p,onlyUnmapped:!p.onlyUnmapped}))}
+              style={{ ...BTN(filters.onlyUnmapped?'#C62828':'#F5F7FA', filters.onlyUnmapped?'#fff':'#555'), border:'1.5px solid #E0E0E0', fontSize:12 }}>
+              {filters.onlyUnmapped ? '🔴 Мосланмаганлар' : 'Барчаси'}
+            </button>
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={load} disabled={loading} style={{ ...BTN('#1976D2') }}>{loading ? '⏳ Юкланмоқда...' : '🔍 Кўрсатиш'}</button>
-          {loaded && <button onClick={exportExcel} style={{ ...BTN('#388E3C') }}>📥 Excel юклаш</button>}
+          <button onClick={load} disabled={loading} style={{ ...BTN('#1976D2') }}>{loading ? '⏳...' : '🔍 Кўрсатиш'}</button>
+          {loaded && <button onClick={exportExcel} style={{ ...BTN('#388E3C') }}>📥 Excel</button>}
         </div>
       </div>
 
@@ -591,43 +714,41 @@ function SalesReport({ fetchSales, showToast, employees }) {
           <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
             <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
               <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Жами савдо</div>
-              <div style={{ fontSize:20, fontWeight:900, color:'#2E7D32' }}>{(totalSumma/1000000).toFixed(1)} млн</div>
-              <div style={{ fontSize:11, color:'#aaa' }}>{data.filter(r=>r.tur!=='vozvrat').length} та қатор</div>
-            </div>
-            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
-              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Қайтариш</div>
-              <div style={{ fontSize:20, fontWeight:900, color:'#C62828' }}>{(vozvratSumma/1000000).toFixed(1)} млн</div>
-              <div style={{ fontSize:11, color:'#aaa' }}>{data.filter(r=>r.tur==='vozvrat').length} та қатор</div>
-            </div>
-            <div style={{ ...CARD, marginBottom:0, flex:1, minWidth:150 }}>
-              <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Соф савдо</div>
-              <div style={{ fontSize:20, fontWeight:900, color:'#1565C0' }}>{(netSumma/1000000).toFixed(1)} млн</div>
-              <div style={{ fontSize:11, color:'#aaa' }}>{data.length} та жами қатор</div>
+              <div style={{ fontSize:22, fontWeight:900, color:'#2E7D32' }}>{(totalSumma/1000000).toFixed(1)} млн</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{data.length} та қатор</div>
             </div>
           </div>
 
-          <div style={{ ...CARD, padding:0, overflow:'auto', maxHeight:500 }}>
+          <div style={{ ...CARD, padding:0, overflow:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead><tr style={{ background:'#F5F7FA', position:'sticky', top:0 }}>
-                {['Сана','Фирма','Савдо вакили','Жамоа','Дори номи','Миқдор','Нарх','Сумма','Тур'].map(h=>(
+                {['Сана','Йўналиш','Шаҳар','Жамоа (CRM)','Савдо вакили (CRM)','Дори номи','Миқдор','Нарх','Сумма'].map(h=>(
                   <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, fontSize:10, color:'#888', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
                 ))}
               </tr></thead>
-              <tbody>{data.slice(0,500).map((r,i)=>(
-                <tr key={r.id||i} style={{ borderTop:'1px solid #F0F0F0', background:r.tur==='vozvrat'?'rgba(239,83,80,0.04)':'transparent' }}>
-                  <td style={{ padding:'6px 10px', whiteSpace:'nowrap', color:'#888', fontSize:11 }}>{r.sana}</td>
-                  <td style={{ padding:'6px 10px' }}><FirmBadge firm={r.firma} /></td>
-                  <td style={{ padding:'6px 10px', fontWeight:600 }}>{r.savdo_vakili}</td>
-                  <td style={{ padding:'6px 10px', color:'#555', fontSize:11 }}>{r.jamoa}</td>
-                  <td style={{ padding:'6px 10px', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
-                  <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.miqdor}</td>
-                  <td style={{ padding:'6px 10px', textAlign:'right', color:'#888' }}>{r.narx?.toLocaleString()}</td>
-                  <td style={{ padding:'6px 10px', textAlign:'right', fontWeight:700, color:r.tur==='vozvrat'?'#C62828':'#2E7D32' }}>{r.summa?.toLocaleString()}</td>
-                  <td style={{ padding:'6px 10px' }}><span style={{ background:r.tur==='vozvrat'?'#FFEBEE':'#E8F5E9', color:r.tur==='vozvrat'?'#C62828':'#2E7D32', borderRadius:6, padding:'2px 8px', fontSize:10, fontWeight:700 }}>{r.tur==='vozvrat'?'Қайтариш':'Савдо'}</span></td>
-                </tr>
-              ))}</tbody>
+              <tbody>{data.map((r,i)=>{
+                const bg = r.is_mapped ? 'transparent' : 'rgba(239,83,80,0.08)'
+                return (
+                  <tr key={r.id||i} style={{ borderTop:'1px solid #F0F0F0', background: bg }}>
+                    <td style={{ padding:'6px 10px', color:'#888', fontSize:11, whiteSpace:'nowrap' }}>{r.sana}</td>
+                    <td style={{ padding:'6px 10px' }}>
+                      <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{r.yonalish}</span>
+                    </td>
+                    <td style={{ padding:'6px 10px', color:'#555' }}>{r.shahar}</td>
+                    <td style={{ padding:'6px 10px', fontWeight:600, color: r.crm_menejer ? '#1A1A2E' : '#C62828' }}>
+                      {r.crm_menejer || r.jamoa}
+                    </td>
+                    <td style={{ padding:'6px 10px', color: r.crm_savdo_vakili ? '#1A1A2E' : '#C62828' }}>
+                      {r.crm_savdo_vakili || r.savdo_vakili}
+                    </td>
+                    <td style={{ padding:'6px 10px', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
+                    <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.miqdor}</td>
+                    <td style={{ padding:'6px 10px', textAlign:'right', color:'#888' }}>{r.narx?.toLocaleString()}</td>
+                    <td style={{ padding:'6px 10px', textAlign:'right', fontWeight:700, color:'#2E7D32' }}>{r.summa?.toLocaleString()}</td>
+                  </tr>
+                )
+              })}</tbody>
             </table>
-            {data.length > 500 && <div style={{ padding:'10px 14px', fontSize:12, color:'#888', textAlign:'center' }}>Жадвалда 500 та кўрсатилди. Excel да тўлиқ кўринади ({data.length} та жами)</div>}
           </div>
         </>
       )}
@@ -1457,6 +1578,28 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
   )
 }
 
+function normalizeRegion(raw) {
+  if (!raw) return ''
+  const map = {
+    'ташкент': 'Тошкент', 'тошкент': 'Тошкент', 'toshkent': 'Тошкент', 'tashkent': 'Тошкент',
+    'андижон': 'Андижон', 'andijan': 'Андижон', 'andijon': 'Андижон',
+    'фарғона': 'Фарғона', 'фаргона': 'Фарғона', 'fergana': 'Фарғона', 'fargona': 'Фарғона',
+    'наманган': 'Наманган', 'namangan': 'Наманган',
+    'самарқанд': 'Самарқанд', 'самарканд': 'Самарқанд', 'samarqand': 'Самарқанд', 'samarkand': 'Самарқанд',
+    'бухоро': 'Бухоро', 'buxoro': 'Бухоро', 'bukhara': 'Бухоро',
+    'навоий': 'Навоий', 'navoi': 'Навоий', 'navoiy': 'Навоий',
+    'қашқадарё': 'Қашқадарё', 'кашкадарья': 'Қашқадарё', 'кашкадарьё': 'Қашқадарё', 'qashqadaryo': 'Қашқадарё',
+    'сурхондарё': 'Сурхондарё', 'сурхандарья': 'Сурхондарё', 'surxondaryo': 'Сурхондарё',
+    'жиззах': 'Жиззах', 'джизак': 'Жиззах', 'jizzax': 'Жиззах',
+    'сирдарё': 'Сирдарё', 'сирдарье': 'Сирдарё', 'сирдарьё': 'Сирдарё', 'sirdaryo': 'Сирдарё', 'сирдаре': 'Сирдарё',
+    'хоразм': 'Хоразм', 'xorazm': 'Хоразм', 'khorezm': 'Хоразм',
+    'қорақалпоғистон': 'Қорақалпоғистон', 'каракалпакстан': 'Қорақалпоғистон',
+    'тошкент вилояти': 'Тошкент вилояти', 'ташкентская': 'Тошкент вилояти',
+  }
+  const key = raw.toString().toLowerCase().trim()
+  return map[key] || raw.toString().trim()
+}
+
 export default function App() {
   const [employees, setEmployees] = useState([])
   const [trainings, setTrainings] = useState([])
@@ -1517,7 +1660,7 @@ export default function App() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [emps, trs, praks] = await Promise.all([fetchEmployees(), fetchTrainings(), fetchPraktikum()])
+      const [emps, trs, praks] = await Promise.all([fetchEmployees(),updateEmployeeSalesStats().catch(console.error), fetchTrainings(), fetchPraktikum()])
       setEmployees(emps)
       setTrainings(trs)
       setPraktikums(praks)
@@ -2195,130 +2338,133 @@ export default function App() {
           </div>
         )}
         {page==='sales' && (
-        <div>
-          {/* Tabs */}
-          <div style={{ display:'flex', gap:6, marginBottom:18 }}>
-            {[['upload','📥 Юклаш'],['report','📋 Ҳисобот'],['planfakt','📊 План-Факт'],['dashboard','🏆 Дашборд']].map(([t,l])=>(
-              <button key={t} onClick={()=>setSalesPage(t)} style={{ padding:'8px 18px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:13, background:salesPage===t?'#1976D2':'#fff', color:salesPage===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
-            ))}
-          </div>
+          <div>
+            <div style={{ display:'flex', gap:6, marginBottom:18 }}>
+              {[['upload','📥 Юклаш'],['mapping','🗂️ Мослаштириш'],['report','📋 Ҳисобот'],['dashboard','🏆 Дашборд']].map(([t,l])=>(
+                <button key={t} onClick={()=>setSalesPage(t)} style={{ padding:'8px 18px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:13, background:salesPage===t?'#1976D2':'#fff', color:salesPage===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
+              ))}
+            </div>
 
-          {/* UPLOAD TAB */}
-          {salesPage==='upload' && (
-            <div style={{ maxWidth:600 }}>
-              <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
-                <h2 style={{ margin:'0 0 6px', fontSize:17 }}>📥 Савдо маълумотларини юклаш</h2>
-                <div style={{ fontSize:13, color:'#888', marginBottom:16 }}>Excel файлни юкланг. Эски маълумотлар ўчирилмайди — янгилар қўшилади.</div>
+            {salesPage==='upload' && (
+              <div style={{ maxWidth:700 }}>
+                <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
+                  <h2 style={{ margin:'0 0 6px', fontSize:17 }}>📥 Маълумотларни юклаш</h2>
+                  <div style={{ fontSize:13, color:'#888', marginBottom:16 }}>Аввал Рееstr файлини, сўнгра Савдо файлини юкланг.</div>
 
-                <label style={LBL}>Савдо файли (Отчет_Продажа_Общая...)</label>
-                <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
-                  <span style={{ fontSize:28 }}>📊</span>
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Excel файлни танланг</div>
-                    <div style={{ fontSize:11, color:'#888' }}>Отчет_Продажа_Общая файли</div>
-                  </div>
-                  <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
-                    const file = e.target.files[0]
-                    if (!file) return
-                    setSalesLoading(true)
-                    setUploadStatus('Файл ўқилмоқда...')
-                    try {
-                      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
-                      const buf = await file.arrayBuffer()
-                      const wb = XLSX.read(buf, { type:'array', cellDates:true })
-
-                      let allRows = []
-                      for (const shName of ['Продажа','Возврат']) {
-                        const ws = wb.Sheets[shName]
-                        if (!ws) continue
+                  <label style={LBL}>1. Рееstr файли (Реестр_Сотрудников...)</label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
+                    <span style={{ fontSize:28 }}>📋</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Рееstr Excel файлини танланг</div>
+                      <div style={{ fontSize:11, color:'#888' }}>Реестр_Сотрудников файли</div>
+                    </div>
+                    <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
+                      const file = e.target.files[0]
+                      if (!file) return
+                      setSalesLoading(true)
+                      setUploadStatus('Рееstr файли ўқилмоқда...')
+                      try {
+                        const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                        const buf = await file.arrayBuffer()
+                        const wb = XLSX.read(buf, { type:'array' })
+                        const ws = wb.Sheets[wb.SheetNames[0]]
                         const raw = XLSX.utils.sheet_to_json(ws, { header:1 })
-                        const tur = shName === 'Возврат' ? 'vozvrat' : 'savdo'
-                        // row[0] is header
-                        for (let i = 2; i < raw.length; i++) {
+                        const rows = []
+                        for (let i = 1; i < raw.length; i++) {
                           const r = raw[i]
-                          if (!r || !r[0]) continue
-                          const sana = r[3] ? new Date(r[3]) : null
-                          allRows.push({
-                            firma: r[0]?.toString()?.trim() || '',
-                            yil: r[1] ? Number(r[1]) : (sana ? sana.getFullYear() : null),
-                            oy: r[2] ? Number(r[2]) : (sana ? sana.getMonth()+1 : null),
-                            sana: sana ? sana.toISOString().split('T')[0] : null,
-                            hisob_faktura: r[4]?.toString()?.trim() || '',
-                            savdo_vakili: r[5]?.toString()?.trim() || '',
-                            shahar: r[6]?.toString()?.trim() || '',
-                            jamoa: r[7]?.toString()?.trim() || '',
-                            yetkazib_beruvchi: r[8]?.toString()?.trim() || '',
-                            tashkilot: r[9]?.toString()?.trim() || '',
-                            ishlab_chiqaruvchi: r[10]?.toString()?.trim() || '',
-                            dori_nomi: r[12]?.toString()?.trim() || '',
-                            miqdor: r[13] ? Number(r[13]) : null,
-                            narx: r[14] ? Number(r[14]) : null,
-                            summa: r[15] ? Number(r[15]) : null,
-                            foiz_ustama: r[16] ? Number(r[16]) : null,
-                            ustama_summa: r[17] ? Number(r[17]) : null,
-                            tur,
+                          if (!r || !r[2]) continue
+                          rows.push({
+                            med_pred: r[3]?.toString()?.trim() || '',
+                            komanda: r[2]?.toString()?.trim() || '',
+                            postavshik: r[4]?.toString()?.trim() || '',
+                            region: normalizeRegion(r[1]?.toString()),
+                            crm_menejer: r[6]?.toString()?.trim() || '',
+                            crm_savdo_vakili: r[7]?.toString()?.trim() || '',
+                            is_mapped: !!(r[6]?.toString()?.trim() && r[7]?.toString()?.trim()),
+                          })
+                        }
+                        await uploadSalesMapping(rows)
+                        setUploadStatus('✅ Рееstr юкланди: ' + rows.length + ' та қатор')
+                        showToast('Рееstr юкланди')
+                      } catch(err) {
+                        setUploadStatus('❌ Хатолик: ' + err.message)
+                      } finally {
+                        setSalesLoading(false)
+                        e.target.value = ''
+                      }
+                    }} />
+                  </label>
+
+                  <label style={LBL}>2. Савдо файли (Отчет_Продажа_Общая...)</label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
+                    <span style={{ fontSize:28 }}>📊</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Савдо Excel файлини танланг</div>
+                      <div style={{ fontSize:11, color:'#888' }}>Отчет_Продажа_Общая файли</div>
+                    </div>
+                    <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
+                      const file = e.target.files[0]
+                      if (!file) return
+                      setSalesLoading(true)
+                      setUploadStatus('Савдо файли ўқилмоқда...')
+                      try {
+                        const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                        const buf = await file.arrayBuffer()
+                        const wb = XLSX.read(buf, { type:'array', cellDates:true })
+
+                        // Load mapping
+                        const { data: mapping } = await supabase.from('sales_mapping').select('*')
+
+                        let allRows = []
+                        for (const shName of ['Продажа','Возврат']) {
+                          const ws = wb.Sheets[shName]
+                          if (!ws) continue
+                          const raw = XLSX.utils.sheet_to_json(ws, { header:1 })
+                          const tur = shName === 'Возврат' ? 'vozvrat' : 'savdo'
+                          for (let i = 2; i < raw.length; i++) {
+                            const r = raw[i]
+                            if (!r || !r[0]) continue
+                            const sana = r[3] ? new Date(r[3]) : null
+                            const medPred = r[5]?.toString()?.trim() || ''
+                            const komanda = r[7]?.toString()?.trim() || ''
+                            const postavshik = r[8]?.toString()?.trim() || ''
+                            const regionRaw = r[6]?.toString()?.trim() || ''
+
+                           // Find in mapping
+                           const mapped = mapping?.find(m =>
+                             m.med_pred?.toLowerCase() === medPred?.toLowerCase() &&
+                             m.komanda?.toLowerCase() === komanda?.toLowerCase()
+                           )
+
+                           allRows.push({
+                             yonalish: r[0]?.toString()?.trim() || '',
+                             yil: r[1] ? Number(r[1]) : (sana ? sana.getFullYear() : null),
+                             oy: r[2] ? Number(r[2]) : (sana ? sana.getMonth()+1 : null),
+                             sana: sana ? sana.toISOString().split('T')[0] : null,
+                             hisob_faktura: r[4]?.toString()?.trim() || '',
+                             savdo_vakili: medPred,
+                             shahar: normalizeRegion(regionRaw),
+                             jamoa: komanda,
+                             yetkazib_beruvchi: postavshik,
+                             tashkilot: r[9]?.toString()?.trim() || '',
+                             ishlab_chiqaruvchi: r[10]?.toString()?.trim() || '',
+                             dori_nomi: r[12]?.toString()?.trim() || '',
+                             miqdor: r[13] ? Number(r[13]) : null,
+                             narx: r[14] ? Number(r[14]) : null,
+                             summa: r[15] ? Number(r[15]) : null,
+                             tur,
+                             crm_menejer: mapped?.crm_menejer || '',
+                             crm_savdo_vakili: mapped?.crm_savdo_vakili || '',
+                             is_mapped: !!(mapped?.crm_menejer && mapped?.crm_savdo_vakili),
                           })
                         }
                       }
-                      setUploadStatus(`${allRows.length} та қатор топилди. Юкланмоқда...`)
+                      setUploadStatus(allRows.length + ' та қатор топилди. Юкланмоқда...')
                       await uploadSalesBatch(allRows)
-                      setUploadStatus(`✅ ${allRows.length} та қатор муваффақиятли юкланди!`)
-                      showToast(`${allRows.length} та савдо маълумоти юкланди`)
+                      setUploadStatus('✅ ' + allRows.length + ' та қатор юкланди!')
+                      showToast(allRows.length + ' та савдо юкланди')
                     } catch(err) {
                       setUploadStatus('❌ Хатолик: ' + err.message)
-                      showToast('Хатолик: ' + err.message, 'error')
-                    } finally {
-                      setSalesLoading(false)
-                      e.target.value = ''
-                    }
-                  }} />
-                </label>
-
-                <label style={LBL}>План-Факт файли</label>
-                <label style={{ display:'flex', alignItems:'center', gap:10, background:'#F0F4FF', border:'2px dashed #BBDEFB', borderRadius:10, padding:'16px 20px', cursor:'pointer', marginBottom:14 }}>
-                  <span style={{ fontSize:28 }}>📋</span>
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:13, color:'#1565C0' }}>Excel файлни танланг</div>
-                    <div style={{ fontSize:11, color:'#888' }}>План_факт файли</div>
-                  </div>
-                  <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={async e=>{
-                    const file = e.target.files[0]
-                    if (!file) return
-                    setSalesLoading(true)
-                    setUploadStatus('План-Факт файли ўқилмоқда...')
-                    try {
-                      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
-                      const buf = await file.arrayBuffer()
-                      const wb = XLSX.read(buf, { type:'array', cellDates:true })
-                      const ws = wb.Sheets['План факт '] || wb.Sheets['План факт'] || wb.Sheets[wb.SheetNames[0]]
-                      const raw = XLSX.utils.sheet_to_json(ws, { header:1 })
-                      const rows = []
-                      for (let i = 2; i < raw.length; i++) {
-                        const r = raw[i]
-                        if (!r || !r[0]) continue
-                        rows.push({
-                          menejer: r[0]?.toString()?.trim() || '',
-                          oy: r[1] ? Number(r[1]) : null,
-                          yil: new Date().getFullYear(),
-                          jamoa: r[2]?.toString()?.trim() || '',
-                          dori_nomi: r[3]?.toString()?.trim() || '',
-                          narx: r[4] ? Number(r[4]) : null,
-                          plan_miqdor: r[5] ? Number(r[5]) : null,
-                          sotish_a: r[6] ? Number(r[6]) : null,
-                          sotish_b: r[7] ? Number(r[7]) : null,
-                          jami_miqdor: r[8] ? Number(r[8]) : null,
-                          foiz: r[9] ? Number(r[9]) : null,
-                          plan_summa: r[10] ? Number(r[10]) : null,
-                          sotish_summa: r[11] ? Number(r[11]) : null,
-                        })
-                      }
-                      setUploadStatus(`${rows.length} та қатор топилди. Юкланмоқда...`)
-                      await uploadPlanFaktBatch(rows)
-                      setUploadStatus(`✅ ${rows.length} та план-факт маълумоти юкланди!`)
-                      showToast(`${rows.length} та план-факт юкланди`)
-                    } catch(err) {
-                      setUploadStatus('❌ Хатолик: ' + err.message)
-                      showToast('Хатолик: ' + err.message, 'error')
                     } finally {
                       setSalesLoading(false)
                       e.target.value = ''
@@ -2327,88 +2473,59 @@ export default function App() {
                 </label>
 
                 {uploadStatus && (
-                  <div style={{ background: uploadStatus.startsWith('✅') ? '#E8F5E9' : uploadStatus.startsWith('❌') ? '#FFEBEE' : '#FFF8E1', border:'1.5px solid', borderColor: uploadStatus.startsWith('✅') ? '#A5D6A7' : uploadStatus.startsWith('❌') ? '#FFCDD2' : '#FFE082', borderRadius:8, padding:'10px 14px', fontSize:13, fontWeight:600, color: uploadStatus.startsWith('✅') ? '#2E7D32' : uploadStatus.startsWith('❌') ? '#C62828' : '#7B5800' }}>
-                    {salesLoading && !uploadStatus.startsWith('✅') && !uploadStatus.startsWith('❌') ? '⏳ ' : ''}{uploadStatus}
+                  <div style={{ background: uploadStatus.startsWith('✅') ? '#E8F5E9' : uploadStatus.startsWith('❌') ? '#FFEBEE' : '#FFF8E1', border:'1.5px solid', borderColor: uploadStatus.startsWith('✅') ? '#A5D6A7' : uploadStatus.startsWith('❌') ? '#FFCDD2' : '#FFE082', borderRadius:8, padding:'10px 14px', fontSize:13, fontWeight:600, color: uploadStatus.startsWith('✅') ? '#2E7D32' : uploadStatus.startsWith('❌') ? '#C62828' : '#7B5800', marginBottom:14 }}>
+                    {uploadStatus}
                   </div>
-                )}
-                <div style={{ ...CARD, borderTop:'4px solid #C62828', marginTop:14 }}>
-                  <div style={{ fontWeight:800, fontSize:15, marginBottom:6, color:'#C62828' }}>🗑️ Маълумотларни ўчириш</div>
-                  <div style={{ fontSize:12, color:'#888', marginBottom:14 }}>Нотўғри юкланган маълумотларни ўчириш учун</div>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
-                    <div>
-                      <label style={LBL}>Йил</label>
-                      <select value={delYil} onChange={e=>setDelYil(e.target.value)} style={{ ...SI, width:100 }}>
-                        <option value=''>—</option>
-                        {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={LBL}>Ой</label>
-                      <select value={delOy} onChange={e=>setDelOy(e.target.value)} style={{ ...SI, width:130 }}>
-                        <option value=''>—</option>
-                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={m}>{m}-ой</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={LBL}>Фирма</label>
-                      <select value={delFirma} onChange={e=>setDelFirma(e.target.value)} style={{ ...SI, width:110 }}>
-                        <option value=''>—</option>
-                        {['PPS','IPS','RMF','PPHS-II'].map(f=><option key={f}>{f}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                    <button onClick={async ()=>{
-                      if (!delYil && !delOy && !delFirma) { showToast('Камида биттасини танланг', 'error'); return }
-                      if (!window.confirm(`Савдо: йил=${delYil||'барча'}, ой=${delOy||'барча'}, фирма=${delFirma||'барча'} ўчирилади?`)) return
-                      try {
-                        await deleteSalesByFilter(delYil, delOy, delFirma)
-                        showToast('Савдо маълумотлари ўчирилди')
-                        setUploadStatus('')
-                        setDelYil(''); setDelOy(''); setDelFirma('')
-                      } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
-                    }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ Савдони ўчириш</button>
+                 )}
 
-                    <button onClick={async ()=>{
-                      if (!window.confirm('БАРЧА план-факт маълумотлари ўчирилади?')) return
-                      try {
-                        await deleteAllPlanFakt()
-                        showToast('План-факт ўчирилди')
-                      } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
-                    }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ План-фактни ўчириш</button>
+                 <div style={{ ...CARD, borderTop:'4px solid #C62828', marginTop:4 }}>
+                   <div style={{ fontWeight:800, fontSize:15, marginBottom:6, color:'#C62828' }}>🗑️ Маълумотларни ўчириш</div>
+                   <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+                     <div><label style={LBL}>Йил</label>
+                       <select value={delYil} onChange={e=>setDelYil(e.target.value)} style={{ ...SI, width:100 }}>
+                         <option value=''>—</option>
+                         {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+                        </select>
+                      </div>
+                      <div><label style={LBL}>Ой</label>
+                        <select value={delOy} onChange={e=>setDelOy(e.target.value)} style={{ ...SI, width:130 }}>
+                          <option value=''>—</option>
+                          {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={m}>{m}-ой</option>)}
+                        </select>
+                      </div>
+                      <div><label style={LBL}>Йўналиш</label>
+                        <select value={delFirma} onChange={e=>setDelFirma(e.target.value)} style={{ ...SI, width:110 }}>
+                          <option value=''>—</option>
+                          {['PPS','IPS','RMF','PPHS-II','SAVA'].map(f=><option key={f}>{f}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                      <button onClick={async ()=>{
+                        if (!delYil && !delOy && !delFirma) { showToast('Камида биттасини танланг', 'error'); return }
+                        if (!window.confirm('Ўчирилади?')) return
+                        try {
+                          await deleteSalesByFilter(delYil, delOy, delFirma)
+                          showToast('Ўчирилди')
+                          setDelYil(''); setDelOy(''); setDelFirma('')
+                        } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+                      }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ Савдони ўчириш</button>
+                      <button onClick={async ()=>{
+                        if (!window.confirm('БАРЧА план-факт ўчирилади?')) return
+                        try { await deleteAllPlanFakt(); showToast('Ўчирилди') }
+                        catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+                      }} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️ План-фактни ўчириш</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {salesPage==='mapping' && <SalesMappingPage showToast={showToast} />}
+            {salesPage==='report' && <SalesReport fetchSales={fetchSales} showToast={showToast} employees={employees} />}
+            {salesPage==='dashboard' && <SalesDashboard fetchSales={fetchSales} fetchPlanFakt={fetchPlanFakt} showToast={showToast} />}
+          </div>
         )}
-
-        {/* REPORT TAB */}
-        {salesPage==='report' && (
-          <SalesReport
-            fetchSales={fetchSales}
-            showToast={showToast}
-            employees={employees}
-          />
-        )}
-
-        {/* PLAN FAKT TAB */}
-        {salesPage==='planfakt' && (
-          <PlanFaktReport
-            fetchPlanFakt={fetchPlanFakt}
-            showToast={showToast}
-          />
-         )}
-
-         {/* DASHBOARD TAB */}
-         {salesPage==='dashboard' && (
-           <SalesDashboard
-             fetchSales={fetchSales}
-             fetchPlanFakt={fetchPlanFakt}
-             showToast={showToast}
-           />
-          )}
-        </div>
-      )}
       </div>
 
       {showQR && (

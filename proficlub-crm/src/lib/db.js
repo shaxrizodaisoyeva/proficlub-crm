@@ -286,3 +286,23 @@ export async function fetchEmployeesWithId() {
   if (error) throw error
   return data
 }
+
+export async function uploadSalesMapping(rows) {
+  await supabase.from('sales_mapping').delete().neq('id', 0)
+  const BATCH = 200
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await supabase.from('sales_mapping').insert(rows.slice(i, i + BATCH))
+    if (error) throw error
+  }
+}
+
+export async function fetchSalesMapping() {
+  const { data, error } = await supabase.from('sales_mapping').select('*')
+  if (error) throw error
+  return data || []
+}
+
+export async function updateSalesMappingRow(id, fields) {
+  const { error } = await supabase.from('sales_mapping').update(fields).eq('id', id)
+  if (error) throw error
+}

@@ -629,7 +629,7 @@ function SalesReport({ fetchSales, showToast }) {
   async function load() {
   setLoading(true)
   try {
-    let query = supabase.from('sales').select('*').order('sana', { ascending: false })
+    let query = supabase.from('sales').select('*').order('sana', { ascending: false }).limit(50000)
     if (filters.yonalish) query = query.eq('yonalish', filters.yonalish)
     if (filters.yil) query = query.eq('yil', Number(filters.yil))
     if (filters.oy) query = query.eq('oy', Number(filters.oy))
@@ -2454,7 +2454,7 @@ export default function App() {
                       try {
                         const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
                         const buf = await file.arrayBuffer()
-                        const wb = XLSX.read(buf, { type:'array', cellDates:true })
+                        const wb = XLSX.read(buf, { type:'array', cellDates:false })
 
                         // Load mapping
                         const { data: mapping } = await supabase.from('sales_mapping').select('*')
@@ -2472,11 +2472,16 @@ export default function App() {
                             try {
                               if (r[3]) {
                                 if (typeof r[3] === 'number') {
-                                  sana = new Date(Math.round((r[3] - 25569) * 86400 * 1000))
+                                  // Excel serial date number
+                                  const d = new Date(Date.UTC(1899, 11, 30) + r[3] * 86400000)
+                                  sana = d
+                                } else if (r[3] instanceof Date) {
+                                  sana = r[3]
                                 } else {
-                                  sana = new Date(r[3].toString().substring(0, 10))
+                                  const s = r[3].toString().trim().substring(0, 10)
+                                  sana = new Date(s)
                                 }
-                                if (isNaN(sana.getTime())) sana = null
+                                if (isNaN(sana?.getTime())) sana = null
                               }
                             } catch(e) { sana = null }
                             const medPred = r[5]?.toString()?.trim() || ''

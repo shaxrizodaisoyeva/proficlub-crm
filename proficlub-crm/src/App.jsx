@@ -2124,6 +2124,11 @@ export default function App() {
                     <Badge role={selEmp.role} />
                     {selEmp.organization && <FirmBadge firm={selEmp.organization} />}
                     {selEmp.hireDate && <span style={{ fontSize:11, color:'#888' }}>Иш бошлаган: {selEmp.hireDate}</span>}
+                    {selEmp.emp_id && (
+                      <span style={{ background:'#1A1A2E', color:'#fff', borderRadius:8, padding:'2px 10px', fontSize:12, fontWeight:900, letterSpacing:2 }}>
+                        🪪 ID: {selEmp.emp_id}
+                      </span>
+                    )}
                     <span style={{ fontSize:11, color:'#888' }}>{selEmp.examResults?.length||0} та имтиҳон</span>
                     {praktikums.some(pr=>(pr.praktikum_participants||[]).some(p=>p.employee_id===selEmp.id&&p.star)) && <span style={{ fontSize:13 }}>⭐</span>}
                   </div>
@@ -2327,6 +2332,18 @@ export default function App() {
               : !addingTr && (
                 <div>
                   <h2 style={{ marginTop:0, marginBottom:14, fontSize:17 }}>Барча тренинглар ({trainings.length})</h2>
+                  <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+                    <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'all', [], showToast)}
+                      style={{ ...BTN('#388E3C') }}>📥 Барча тренинглар Excel</button>
+                    {selectedTrIds.length > 0 && (
+                      <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'multi', selectedTrIds, showToast)}
+                        style={{ ...BTN('#1976D2') }}>📥 Танланган ({selectedTrIds.length} та) Excel</button>
+                    )}
+                    {selectedTrIds.length > 0 && (
+                      <button onClick={()=>setSelectedTrIds([])}
+                        style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>✕ Бекор</button>
+                     )}
+                  </div>
                   <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'all', [], showToast)}
                     style={{ ...BTN('#388E3C'), marginBottom:14 }}>📥 Барча тренинглар Excel</button>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
@@ -2336,7 +2353,13 @@ export default function App() {
                       const avg2 = sc2.length ? Math.round(sc2.reduce((a,b)=>a+b,0)/sc2.length) : null
                       const pass2 = wr.filter(e=>e.examResults.find(r=>r.trainingId===t.id)?.passed).length
                       return (
-                        <div key={t.id} onClick={()=>setSelTraining(t)} style={{ ...CARD, cursor:'pointer', marginBottom:0, borderTop:'3px solid #1976D2' }}>
+                        <div key={t.id} style={{ ...CARD, cursor:'pointer', marginBottom:0, borderTop:'3px solid #1976D2', position:'relative' }}>
+                          <div style={{ position:'absolute', top:10, right:10 }} onClick={e=>e.stopPropagation()}>
+                            <input type="checkbox" checked={selectedTrIds.includes(t.id)}
+                              onChange={e=>{ e.stopPropagation(); setSelectedTrIds(p => p.includes(t.id) ? p.filter(id=>id!==t.id) : [...p, t.id]) }}
+                              style={{ width:16, height:16, cursor:'pointer' }} />
+                          </div>
+                          <div onClick={()=>setSelTraining(t)}>
                           <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{t.title}</div>
                           <div style={{ fontSize:11, color:'#888', marginBottom:10 }}>{t.date}</div>
                           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>

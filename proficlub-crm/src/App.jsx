@@ -2595,7 +2595,7 @@ export default function App() {
               {'proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id}
             </div>
             <div style={{ display:'flex', gap:8 }}>
-              
+              <a
                 href={'https://api.qrserver.com/v1/create-qr-code/?size=500x500&color=1B5E20&bgcolor=ffffff&data=' + encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}
                 download={'qr_' + showQR.title + '.png'}
                 style={{ flex:1, padding:'12px', background:'#E8F5E9', color:'#1B5E20', borderRadius:12, fontWeight:700, fontSize:13, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>

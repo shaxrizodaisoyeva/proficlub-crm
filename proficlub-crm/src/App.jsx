@@ -2352,8 +2352,6 @@ export default function App() {
                         style={{ ...BTN('#F5F7FA','#555'), border:'1.5px solid #ddd' }}>✕ Бекор</button>
                      )}
                   </div>
-                  <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'all', [], showToast)}
-                    style={{ ...BTN('#388E3C'), marginBottom:14 }}>📥 Барча тренинглар Excel</button>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
                     {trainings.map(t=>{
                       const wr = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id))

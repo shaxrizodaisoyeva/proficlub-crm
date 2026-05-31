@@ -506,9 +506,11 @@ function SalesMappingPage({ showToast }) {
   async function loadData() {
     setLoading(true)
     try {
-      const { data: rows, error } = await supabase.from('sales_mapping').select('*').order('region').order('komanda')
+      let query = supabase.from('sales').select('*').neq('tur', 'vozvrat').limit(50000)
+      if (oy) query = query.eq('oy', Number(oy))
+      const { data, error } = await query
       if (error) throw error
-      setData(rows || [])
+      setSales(data || [])
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
     finally { setLoading(false) }
   }

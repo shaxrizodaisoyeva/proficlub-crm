@@ -1696,21 +1696,19 @@ export default function App() {
   }, [])
 
   const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      await updateEmployeeSalesStats().catch(console.error)
-      await updateEmployeeSalesStats().catch(console.error)
-      const [emps, trs, praks] = await Promise.all([
-        fetchEmployees(),
-        fetchTrainings(),
-        fetchPraktikum()
-      ])
-      setEmployees(emps)
-      setTrainings(trs)
-      setPraktikums(praks)
-    } catch(e) { showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error') }
-    finally { setLoading(false) }
-  }, [showToast])
+  setLoading(true)
+  try {
+    const [emps, trs, praks] = await Promise.all([
+      fetchEmployees(),
+      fetchTrainings(),
+      fetchPraktikum()
+    ])
+    setEmployees(emps)
+    setTrainings(trs)
+    setPraktikums(praks)
+  } catch(e) { showToast('Маълумотларни юклаб бўлмади: ' + e.message, 'error') }
+  finally { setLoading(false) }
+}, [showToast])
 
   useEffect(()=>{ load() }, [load])
 

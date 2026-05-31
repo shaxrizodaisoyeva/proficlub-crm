@@ -2367,8 +2367,10 @@ export default function App() {
                             {avg2!=null && <span style={{ background:scoreBg(avg2), color:scoreColor(avg2), borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700 }}>Avg: {avg2}</span>}
                             {sc2.length>0 && <span style={{ background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700 }}>✓ {pass2}</span>}
                           </div>
-                        )
-                     })}
+                        </div>
+                      </div>
+                     )
+                    })}
                     {trainings.length===0 && !addingTr && <div style={{ ...CARD, color:'#aaa', textAlign:'center', padding:40 }}>Ҳали тренинг йўқ.</div>}
                   </div>
                 </div>

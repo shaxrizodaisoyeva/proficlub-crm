@@ -278,7 +278,7 @@ async function exportDashboardToPDF(elementId, titleToken = 'Dashboard') {
   } catch (err) { window.print(); }
 }
 
-function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, showToast }) {
+function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, showToast, onShowQR }) {
   const [addingEmp, setAddingEmp] = useState(false)
   const [empSearch, setEmpSearch] = useState('')
   const [editingP, setEditingP]   = useState(null) // participant being edited
@@ -356,6 +356,7 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
             </button>
             <button onClick={()=>onEdit(prak)} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB' }}>✏️ Таҳрирлаш</button>
             <button onClick={()=>onDelete(prak.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
+            <button onClick={()=>onShowQR && onShowQR(prak)} style={{ ...BTN('#1B5E20') }}>📲 QR Давомат</button>
           </div>
         </div>
       </div>
@@ -1896,6 +1897,8 @@ export default function App() {
   async function handleSavePrak() {
     if (!newPrak.title.trim()) return
     setSaving(true)
+    let savedId = null
+    let savedTitle = newPrak.title
     try {
       if (editingPrak) {
         await updatePraktikum(editingPrak.id, { title:newPrak.title, date:newPrak.date, description:newPrak.description })
@@ -1904,14 +1907,17 @@ export default function App() {
       } else {
         const created = await createPraktikum(newPrak)
         showToast(`"${created.title}" практикуми яратилди`)
+        savedId = created.id
       }
       await load()
       setAddingPrak(false)
       setNewPrak({ title:'', date:'', description:'' })
+      if (savedId) {
+        setShowQR({ type:'praktikum', id: savedId, title: savedTitle })
+      }
     } catch(e) { showToast(e.message,'error') }
     finally { setSaving(false) }
   }
-
   async function handleDeletePrak(id) {
     setSaving(true)
     try {
@@ -2036,7 +2042,9 @@ export default function App() {
               <div key={emp.id} onClick={()=>{ setSelected(emp.id); setEditing(false); setEmpTab('info'); setAdding(false) }} style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', cursor:'pointer', background:selected===emp.id?(FIRM_COLORS[emp.organization]?.bg||'#EEF4FF'):'transparent', borderLeft:`3px solid ${selected===emp.id?(FIRM_COLORS[emp.organization]?.dot||'#1976D2'):'transparent'}` }}>
                 <Avatar name={emp.name} size={34} />
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{emp.name}</div>
+                  <div style={{ fontWeight:700, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {emp.name}{emp.emp_id ? <span style={{ color:'#aaa', fontWeight:400, fontSize:11 }}> ({emp.emp_id})</span> : ''}
+                  </div>
                   <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2, flexWrap:'wrap' }}>
                     <Badge role={emp.role} />
                     {emp.organization && <FirmBadge firm={emp.organization} />}
@@ -2417,6 +2425,7 @@ export default function App() {
                   onEdit={p=>{ setEditingPrak(p); setNewPrak({ title:p.title, date:p.date||'', description:p.description||'' }); setAddingPrak(true) }}
                   onRefresh={async ()=>{ const praks = await fetchPraktikum(); setPraktikums(praks); setSelPrak(praks.find(p=>p.id===selPrak.id)||null) }}
                   showToast={showToast}
+                  onShowQR={p=>setShowQR({ type:'praktikum', id: p.id, title: p.title })}
                 />
               : !addingPrak && (
                 <div>

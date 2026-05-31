@@ -627,22 +627,22 @@ function SalesReport({ fetchSales, showToast }) {
   const [loaded, setLoaded] = useState(false)
 
   async function load() {
-    setLoading(true)
-    try {
-      let query = supabase.from('sales').select('*').neq('tur','vozvrat').order('sana', { ascending: false })
-      if (filters.yonalish) query = query.eq('yonalish', filters.yonalish)
-      if (filters.yil) query = query.eq('yil', Number(filters.yil))
-      if (filters.oy) query = query.eq('oy', Number(filters.oy))
-      if (filters.savdo_vakili) query = query.ilike('savdo_vakili', '%' + filters.savdo_vakili + '%')
-      if (filters.jamoa) query = query.ilike('jamoa', '%' + filters.jamoa + '%')
-      if (filters.onlyUnmapped) query = query.eq('is_mapped', false)
-      const { data: res, error } = await query
-      if (error) throw error
-      setData(res || [])
-      setLoaded(true)
-    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
-    finally { setLoading(false) }
-  }
+  setLoading(true)
+  try {
+    let query = supabase.from('sales').select('*').order('sana', { ascending: false })
+    if (filters.yonalish) query = query.eq('yonalish', filters.yonalish)
+    if (filters.yil) query = query.eq('yil', Number(filters.yil))
+    if (filters.oy) query = query.eq('oy', Number(filters.oy))
+    if (filters.savdo_vakili) query = query.ilike('savdo_vakili', '%' + filters.savdo_vakili + '%')
+    if (filters.jamoa) query = query.ilike('jamoa', '%' + filters.jamoa + '%')
+    if (filters.onlyUnmapped) query = query.eq('is_mapped', false)
+    const { data: res, error } = await query
+    if (error) throw error
+    setData(res || [])
+    setLoaded(true)
+  } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  finally { setLoading(false) }
+}
 
   async function exportExcel() {
     try {
@@ -2469,14 +2469,16 @@ export default function App() {
                             const r = raw[i]
                             if (!r || !r[0]) continue
                             let sana = null
-                            if (r[3]) {
-                              if (typeof r[3] === 'number') {
-                                sana = new Date(Math.round((r[3] - 25569) * 86400 * 1000))
-                              } else {
-                                const str = r[3].toString().trim().substring(0, 10)
-                                sana = new Date(str)
+                            try {
+                              if (r[3]) {
+                                if (typeof r[3] === 'number') {
+                                  sana = new Date(Math.round((r[3] - 25569) * 86400 * 1000))
+                                } else {
+                                  sana = new Date(r[3].toString().substring(0, 10))
+                                }
+                                if (isNaN(sana.getTime())) sana = null
                               }
-                            }
+                            } catch(e) { sana = null }
                             const medPred = r[5]?.toString()?.trim() || ''
                             const komanda = r[7]?.toString()?.trim() || ''
                             const postavshik = r[8]?.toString()?.trim() || ''

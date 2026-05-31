@@ -7,7 +7,7 @@ import {
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
   fetchSales, uploadSalesBatch, deleteSalesByFilter, deleteAllSales, deleteAllPlanFakt,
   fetchPlanFakt, uploadPlanFaktBatch,
-  uploadSalesMapping, fetchSalesMapping, updateSalesMappingRow,
+  uploadSalesMapping, fetchSalesMapping, updateSalesMappingRow, updateEmployeeSalesStats,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -735,11 +735,17 @@ function SalesReport({ fetchSales, showToast }) {
                       <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{r.yonalish}</span>
                     </td>
                     <td style={{ padding:'6px 10px', color:'#555' }}>{r.shahar}</td>
-                    <td style={{ padding:'6px 10px', fontWeight:600, color: r.crm_menejer ? '#1A1A2E' : '#C62828' }}>
-                      {r.crm_menejer || r.jamoa}
+                    <td style={{ padding:'6px 10px', fontWeight:600 }}>
+                      {r.crm_menejer
+                        ? <span style={{ color:'#1A1A2E' }}>{r.crm_menejer}</span>
+                        : <span style={{ color:'#C62828', background:'rgba(239,83,80,0.08)', borderRadius:4, padding:'1px 6px', fontSize:11 }}>{r.jamoa}</span>
+                      }
                     </td>
-                    <td style={{ padding:'6px 10px', color: r.crm_savdo_vakili ? '#1A1A2E' : '#C62828' }}>
-                      {r.crm_savdo_vakili || r.savdo_vakili}
+                    <td style={{ padding:'6px 10px' }}>
+                      {r.crm_savdo_vakili
+                        ? <span style={{ color:'#1A1A2E' }}>{r.crm_savdo_vakili}</span>
+                        : <span style={{ color:'#C62828', background:'rgba(239,83,80,0.08)', borderRadius:4, padding:'1px 6px', fontSize:11 }}>{r.savdo_vakili}</span>
+                      }
                     </td>
                     <td style={{ padding:'6px 10px', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
                     <td style={{ padding:'6px 10px', textAlign:'right' }}>{r.miqdor}</td>
@@ -1600,6 +1606,38 @@ function normalizeRegion(raw) {
   return map[key] || raw.toString().trim()
 }
 
+function normalizeRegionFromKomanda(komanda) {
+  if (!komanda) return ''
+  const lower = komanda.toLowerCase()
+  const regionMap = {
+    'тошкент': 'Тошкент', 'toshkent': 'Тошкент', 'ташкент': 'Тошкент',
+    'андижон': 'Андижон', 'andijon': 'Андижон',
+    'фарғона': 'Фарғона', 'фаргона': 'Фарғона', 'fergana': 'Фарғона',
+    'наманган': 'Наманган', 'namangan': 'Наманган',
+    'самарқанд': 'Самарқанд', 'самарканд': 'Самарқанд', 'samarqand': 'Самарқанд',
+    'бухоро': 'Бухоро', 'buxoro': 'Бухоро',
+    'навоий': 'Навоий', 'navoiy': 'Навоий',
+    'қашқадарё': 'Қашқадарё', 'кашкадарья': 'Қашқадарё', 'qashqadaryo': 'Қашқадарё',
+    'сурхондарё': 'Сурхондарё', 'surxondaryo': 'Сурхондарё',
+    'жиззах': 'Жиззах', 'jizzax': 'Жиззах',
+    'сирдарё': 'Сирдарё', 'sirdaryo': 'Сирдарё', 'сирдаре': 'Сирдарё',
+    'хоразм': 'Хоразм', 'xorazm': 'Хоразм',
+    'таш.обл': 'Тошкент вилояти', 'таш обл': 'Тошкент вилояти',
+    'нукус': 'Нукус', 'nukus': 'Нукус',
+    'термиз': 'Термиз', 'termiz': 'Термиз',
+    'қарши': 'Қарши', 'qarshi': 'Қарши',
+    'гулистон': 'Гулистон', 'guliston': 'Гулистон',
+    'урганч': 'Урганч', 'urganch': 'Урганч',
+  }
+  for (const [key, val] of Object.entries(regionMap)) {
+    if (lower.includes(key)) return val
+  }
+  // Try to extract first word before underscore
+  const parts = komanda.split('_')
+  if (parts[0]) return normalizeRegion(parts[0].trim())
+  return ''
+}
+
 export default function App() {
   const [employees, setEmployees] = useState([])
   const [trainings, setTrainings] = useState([])
@@ -1660,7 +1698,8 @@ export default function App() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [emps, trs, praks] = await Promise.all([fetchEmployees(),updateEmployeeSalesStats().catch(console.error), fetchTrainings(), fetchPraktikum()])
+      await updateEmployeeSalesStats().catch(console.error)
+      const [emps, trs, praks] = await Promise.all([fetchEmployees(), fetchTrainings(), fetchPraktikum()])
       setEmployees(emps)
       setTrainings(trs)
       setPraktikums(praks)
@@ -2424,7 +2463,17 @@ export default function App() {
                           for (let i = 2; i < raw.length; i++) {
                             const r = raw[i]
                             if (!r || !r[0]) continue
-                            const sana = r[3] ? new Date(r[3]) : null
+                            const sanaRaw = r[3]
+                            let sana = null
+                            if (sanaRaw) {
+                              if (typeof sanaRaw === 'number') {
+                                // Excel serial date
+                                sana = new Date(Math.round((sanaRaw - 25569) * 86400 * 1000))
+                              } else {
+                                // String like "2026-01-05 00:00:00"
+                                sana = new Date(sanaRaw.toString().substring(0, 10))
+                              }
+                            }
                             const medPred = r[5]?.toString()?.trim() || ''
                             const komanda = r[7]?.toString()?.trim() || ''
                             const postavshik = r[8]?.toString()?.trim() || ''
@@ -2443,7 +2492,7 @@ export default function App() {
                              sana: sana ? sana.toISOString().split('T')[0] : null,
                              hisob_faktura: r[4]?.toString()?.trim() || '',
                              savdo_vakili: medPred,
-                             shahar: normalizeRegion(regionRaw),
+                             shahar: normalizeRegion(regionRaw) || normalizeRegionFromKomanda(komanda),
                              jamoa: komanda,
                              yetkazib_beruvchi: postavshik,
                              tashkilot: r[9]?.toString()?.trim() || '',
@@ -2543,12 +2592,12 @@ export default function App() {
               {'proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id}
             </div>
             <div style={{ display:'flex', gap:8 }}>
-        
+              
                 href={'https://api.qrserver.com/v1/create-qr-code/?size=500x500&color=1B5E20&bgcolor=ffffff&data=' + encodeURIComponent('https://proficlub-crm.vercel.app/attendance/' + showQR.type + '/' + showQR.id)}
                 download={'qr_' + showQR.title + '.png'}
                 style={{ flex:1, padding:'12px', background:'#E8F5E9', color:'#1B5E20', borderRadius:12, fontWeight:700, fontSize:13, textDecoration:'none', border:'1.5px solid #A5D6A7' }}>
                 📥 Юклаш
-              
+              </a>
               <button onClick={()=>setShowQR(null)}
                 style={{ flex:1, padding:'12px', background:'#F5F7FA', color:'#555', border:'1.5px solid #E0E0E0', borderRadius:12, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 ✕ Ёпиш

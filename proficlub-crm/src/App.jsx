@@ -173,38 +173,69 @@ function DonutChart({ passed, failed }) {
 
 async function exportTrainingsExcel(trainingsList, sessionsList, employees, filterType = 'all', selectedIds = [], showToast) {
   try {
-    const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
-    let targets = trainingsList;
-    let fileNameToken = "barcha_treninglar";
+    const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+    let targets = trainingsList
+    let fileNameToken = 'barcha_treninglar'
     if (filterType === 'single' && selectedIds.length > 0) {
-      targets = trainingsList.filter(t => t.id === selectedIds[0]);
-      fileNameToken = `trening_${targets[0]?.title || 'id'}`;
+      targets = trainingsList.filter(t => t.id === selectedIds[0])
+      fileNameToken = targets[0]?.title?.replace(/\s+/g,'_') || 'trening'
     } else if (filterType === 'multi' && selectedIds.length > 0) {
-      targets = trainingsList.filter(t => selectedIds.includes(t.id));
-      fileNameToken = "tanlangan_treninglar";
+      targets = trainingsList.filter(t => selectedIds.includes(t.id))
+      fileNameToken = 'tanlangan_treninglar'
     }
+
+    // Fetch sessions for these trainings
+    const { data: allSessions } = await supabase
+      .from('sessions')
+      .select('*, session_participants(*, employees(name, role))')
+      .in('training_id', targets.map(t => t.id))
+
     const excelRows = employees.map(emp => {
-      const entry = { 'Ходим Исми': emp.name, 'Лавозими': emp.role, 'Ташкилот': emp.organization || '—' };
-      let attendedCount = 0;
+      const row = {
+        'Ходим': emp.name,
+        'Лавозим': emp.role,
+        'Ташкилот': emp.organization || '—',
+      }
+      let totalAttended = 0
       targets.forEach(t => {
-        const associatedSessions = sessionsList.filter(s => s.training_id === t.id);
-        let attendedThisTraining = false;
-        associatedSessions.forEach(s => {
-          const participants = s.session_participants || [];
-          if (participants.some(p => p.employee_id === emp.id && p.attended)) { attendedThisTraining = true; }
-        });
-        if (attendedThisTraining) attendedCount++;
-        entry[t.title] = attendedThisTraining ? 'Қатнашди' : 'Қатнашмади';
-      });
-      entry['Жами Иштирок сони'] = `${attendedCount} / ${targets.length}`;
-      return entry;
-    });
-    const ws = XLSX.utils.json_to_sheet(excelRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Давомат Ҳисоботи');
-    XLSX.writeFile(wb, `davomat_${fileNameToken}_${new Date().toISOString().split('T')[0]}.xlsx`);
-    if (showToast) showToast('Excel ҳисобот муваффақиятли юкланди!');
-  } catch (e) { if (showToast) showToast('Excel экспортда хатолик: ' + e.message, 'error'); }
+        const tSessions = (allSessions || []).filter(s => s.training_id === t.id)
+        const attended = tSessions.some(s =>
+          (s.session_participants || []).some(p => p.employee_id === emp.id)
+        )
+        row[t.title] = attended ? '✓ Қатнашди' : '✗ Қатнашмади'
+        if (attended) totalAttended++
+      })
+      row['Жами'] = totalAttended + ' / ' + targets.length
+      return row
+    })
+
+    // Summary sheet
+    const summaryRows = targets.map(t => {
+      const tSessions = (allSessions || []).filter(s => s.training_id === t.id)
+      const attendedIds = new Set()
+      tSessions.forEach(s => (s.session_participants || []).forEach(p => attendedIds.add(p.employee_id)))
+      return {
+        'Тренинг': t.title,
+        'Сана': t.date,
+        'Иштирокчилар сони': attendedIds.size,
+        'Жами ходимлар': employees.length,
+        'Фоиз': employees.length > 0 ? Math.round(attendedIds.size / employees.length * 100) + '%' : '0%'
+      }
+    })
+
+    const wb = XLSX.utils.book_new()
+    const ws1 = XLSX.utils.json_to_sheet(excelRows)
+    ws1['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 12 }, ...targets.map(() => ({ wch: 20 })), { wch: 10 }]
+    XLSX.utils.book_append_sheet(wb, ws1, 'Давомат')
+
+    const ws2 = XLSX.utils.json_to_sheet(summaryRows)
+    XLSX.utils.book_append_sheet(wb, ws2, 'Хулоса')
+
+    XLSX.writeFile(wb, `davomat_${fileNameToken}_${new Date().toISOString().split('T')[0]}.xlsx`)
+    if (showToast) showToast('Excel юкланди!')
+  } catch(e) {
+    if (showToast) showToast('Хатолик: ' + e.message, 'error')
+  }
 }
 
 async function exportPraktikumExcel(prak, showToast) {
@@ -1132,7 +1163,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   )
 
   return (
-    <div>
+    <div id={`training-dash-${training.id}`}>
       <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:10 }}>
           <div>
@@ -1148,6 +1179,10 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               <input type="file" accept=".pdf,.pptx,.docx,.xlsx" style={{ display:'none' }} onChange={e=>onUploadMaterial(training, e.target.files[0])} />
             </label>
             <button onClick={()=>onDeleteTraining(training.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
+            <button onClick={()=>exportTrainingsExcel([training], sessions, employees, 'single', [training.id], showToast)} 
+              style={{ ...BTN('#388E3C'), border:'none' }}>📥 Excel Давомат</button>
+            <button onClick={()=>exportDashboardToPDF(`training-dash-${training.id}`, training.title)} 
+              style={{ ...BTN('#7B1FA2'), border:'none' }}>📄 PDF</button>
           </div>
         </div>
       </div>
@@ -1675,6 +1710,7 @@ export default function App() {
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
   const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
+  const [selectedTrIds, setSelectedTrIds] = useState([])
   // Praktikum states
   const [selPrak, setSelPrak]     = useState(null)
   // Sales states
@@ -2291,6 +2327,8 @@ export default function App() {
               : !addingTr && (
                 <div>
                   <h2 style={{ marginTop:0, marginBottom:14, fontSize:17 }}>Барча тренинглар ({trainings.length})</h2>
+                  <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'all', [], showToast)}
+                    style={{ ...BTN('#388E3C'), marginBottom:14 }}>📥 Барча тренинглар Excel</button>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
                     {trainings.map(t=>{
                       const wr = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id))

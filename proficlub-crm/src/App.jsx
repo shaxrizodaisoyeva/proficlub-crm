@@ -732,19 +732,19 @@ function SalesReport({ fetchSales, showToast }) {
                   <tr key={r.id||i} style={{ borderTop:'1px solid #F0F0F0', background: bg }}>
                     <td style={{ padding:'6px 10px', color:'#888', fontSize:11, whiteSpace:'nowrap' }}>{r.sana}</td>
                     <td style={{ padding:'6px 10px' }}>
-                      <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{r.yonalish}</span>
+                      <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{r.yonalish || r.firma || '—'}</span>
                     </td>
                     <td style={{ padding:'6px 10px', color:'#555' }}>{r.shahar}</td>
                     <td style={{ padding:'6px 10px', fontWeight:600 }}>
                       {r.crm_menejer
                         ? <span style={{ color:'#1A1A2E' }}>{r.crm_menejer}</span>
-                        : <span style={{ color:'#C62828', background:'rgba(239,83,80,0.08)', borderRadius:4, padding:'1px 6px', fontSize:11 }}>{r.jamoa}</span>
+                        : <span style={{ color:'#C62828' }}>{r.jamoa || '—'}</span>
                       }
                     </td>
                     <td style={{ padding:'6px 10px' }}>
                       {r.crm_savdo_vakili
                         ? <span style={{ color:'#1A1A2E' }}>{r.crm_savdo_vakili}</span>
-                        : <span style={{ color:'#C62828', background:'rgba(239,83,80,0.08)', borderRadius:4, padding:'1px 6px', fontSize:11 }}>{r.savdo_vakili}</span>
+                        : <span style={{ color:'#C62828' }}>{r.savdo_vakili || '—'}</span>
                       }
                     </td>
                     <td style={{ padding:'6px 10px', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.dori_nomi}</td>
@@ -1699,7 +1699,12 @@ export default function App() {
     setLoading(true)
     try {
       await updateEmployeeSalesStats().catch(console.error)
-      const [emps, trs, praks] = await Promise.all([fetchEmployees(), fetchTrainings(), fetchPraktikum()])
+      await updateEmployeeSalesStats().catch(console.error)
+      const [emps, trs, praks] = await Promise.all([
+        fetchEmployees(),
+        fetchTrainings(),
+        fetchPraktikum()
+      ])
       setEmployees(emps)
       setTrainings(trs)
       setPraktikums(praks)
@@ -2463,15 +2468,13 @@ export default function App() {
                           for (let i = 2; i < raw.length; i++) {
                             const r = raw[i]
                             if (!r || !r[0]) continue
-                            const sanaRaw = r[3]
                             let sana = null
-                            if (sanaRaw) {
-                              if (typeof sanaRaw === 'number') {
-                                // Excel serial date
-                                sana = new Date(Math.round((sanaRaw - 25569) * 86400 * 1000))
+                            if (r[3]) {
+                              if (typeof r[3] === 'number') {
+                                sana = new Date(Math.round((r[3] - 25569) * 86400 * 1000))
                               } else {
-                                // String like "2026-01-05 00:00:00"
-                                sana = new Date(sanaRaw.toString().substring(0, 10))
+                                const str = r[3].toString().trim().substring(0, 10)
+                                sana = new Date(str)
                               }
                             }
                             const medPred = r[5]?.toString()?.trim() || ''

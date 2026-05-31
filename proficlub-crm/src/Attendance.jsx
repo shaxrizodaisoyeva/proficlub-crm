@@ -300,7 +300,7 @@ export default function Attendance() {
 
         {!confirmCity ? (
           <>
-            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 900, color: '#1A1A2E', textAlign: 'center' }}>Сиз қайси шаҳардасиз?</h2>
+            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 900, color: '#1A1A2E', textAlign: 'center' }}>Тренинг қайси шаҳарда бўляпти?</h2>
             <p style={{ margin: '0 0 16px', fontSize: 13, color: '#888', textAlign: 'center' }}>Шаҳар номини ёзинг (исталган ҳарфда)</p>
             <input
               value={cityInput}

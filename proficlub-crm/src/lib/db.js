@@ -210,23 +210,25 @@ export async function removePraktikumParticipant(id) {
 // ── SALES ────────────────────────────────────────────────────────────────────
 
 export async function fetchSales(filters = {}) {
-  let query = supabase.from('sales').select('*').order('sana', { ascending: false })
-  if (filters.firma) query = query.eq('firma', filters.firma)
+  let query = supabase.from('sales').select('*').order('sana', { ascending: false }).limit(50000)
   if (filters.yil) query = query.eq('yil', filters.yil)
   if (filters.oy) query = query.eq('oy', filters.oy)
-  if (filters.savdo_vakili) query = query.ilike('savdo_vakili', `%${filters.savdo_vakili}%`)
-  if (filters.jamoa) query = query.ilike('jamoa', `%${filters.jamoa}%`)
-  if (filters.tur) query = query.eq('tur', filters.tur)
+  if (filters.firma) query = query.eq('yonalish', filters.firma)
+  if (filters.savdo_vakili) query = query.ilike('savdo_vakili', '%' + filters.savdo_vakili + '%')
+  if (filters.jamoa) query = query.ilike('jamoa', '%' + filters.jamoa + '%')
   const { data, error } = await query
   if (error) throw error
-  return data
+  return data || []
 }
 
 export async function uploadSalesBatch(rows) {
   const BATCH = 500
   for (let i = 0; i < rows.length; i += BATCH) {
     const { error } = await supabase.from('sales').insert(rows.slice(i, i + BATCH))
-    if (error) throw error
+    if (error) {
+      console.error('Upload error:', error)
+      throw new Error(error.message)
+    }
   }
 }
 

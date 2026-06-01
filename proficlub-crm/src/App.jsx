@@ -538,15 +538,16 @@ function SalesMappingPage({ showToast }) {
   async function loadData() {
     setLoading(true)
     try {
-      let query = supabase.from('sales').select('*').neq('tur', 'vozvrat').limit(50000)
-      if (oy) query = query.eq('oy', Number(oy))
-      const { data, error } = await query
+      const { data: rows, error } = await supabase
+        .from('sales_mapping')
+        .select('*')
+        .order('region')
+        .order('komanda')
       if (error) throw error
-      setSales(data || [])
+      setData(rows || [])
     } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
     finally { setLoading(false) }
   }
-
   async function handleSave(id) {
     try {
       const isMapped = !!(editVals.crm_menejer?.trim() && editVals.crm_savdo_vakili?.trim())

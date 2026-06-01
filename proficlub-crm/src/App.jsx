@@ -948,7 +948,7 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
 
   // Top menejerlar
   const byMenejer = sales.reduce((acc,r)=>{
-    const k = r.savdo_vakili||'—'
+    const k = r.crm_savdo_vakili || r.savdo_vakili || '—'
     acc[k] = (acc[k]||0) + (r.summa||0)
     return acc
   }, {})

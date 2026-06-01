@@ -980,9 +980,12 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const wb = XLSX.utils.book_new()
 
-      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name, summa], i) => {
-        // Xuddi tepadagi mantiq kabi Excelga ham to'g'ri ismni yuboramiz
-        const foundRow = Array.isArray(data) ? data.find(r => r.jamoa === name) : null;
+      const ws1 = XLSX.utils.json_to_sheet((topMenejer || []).map(([name, summa], i) => {
+        // Xavfsiz qidiruv
+        const foundRow = (typeof data !== 'undefined' && Array.isArray(data)) 
+          ? data.find(r => r.jamoa === name) 
+          : null;
+          
         const cleanName = foundRow?.crm_menejer || name;
 
         return { 
@@ -994,16 +997,15 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       }))
       XLSX.utils.book_append_sheet(wb, ws1, 'Top Менежерлар')
 
-      const ws2 = XLSX.utils.json_to_sheet(topDori.map(([name, v], i) => ({ '#': i + 1, 'Дори': name, 'Миқдор': v.miqdor, 'Сумма': v.summa })))
+      const ws2 = XLSX.utils.json_to_sheet((topDori || []).map(([name, v], i) => ({ '#': i + 1, 'Дори': name, 'Миқдор': v.miqdor, 'Сумма': v.summa })))
       XLSX.utils.book_append_sheet(wb, ws2, 'Top Дорилар')
 
-      const ws3 = XLSX.utils.json_to_sheet(Object.entries(byOy).map(([oy, summa]) => ({ 'Ой': oylar[Number(oy) - 1], 'Сумма': summa, 'млн': (summa / 1000000).toFixed(1) })))
+      const ws3 = XLSX.utils.json_to_sheet(Object.entries(byOy || {}).map(([oy, summa]) => ({ 'Ой': oylar[Number(oy) - 1], 'Сумма': summa, 'млн': (summa / 1000000).toFixed(1) })))
       XLSX.utils.book_append_sheet(wb, ws3, 'Ойлик динамика')
 
       XLSX.writeFile(wb, `dashboard_${yil}.xlsx`)
     } catch (e) { showToast('Хатолик: ' + e.message, 'error') }
   }
-
   return (
     <div>
       <div style={{ ...CARD, borderTop:'4px solid #9C27B0' }}>
@@ -1066,17 +1068,19 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
             {/* Top menejerlar */}
             <div style={{ ...CARD }}>
               <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>🏆 Top 10 Менежер (сумма)</div>
-              {topMenejer.map(([name, summa], i) => {
+              {topMenejer && topMenejer.map(([name, summa], i) => {
       
-                // 1. data massividan ushbu xom 'name' ga mos keluvchi to'g'ri crm_menejer ismini qidiramiz
-                const foundRow = Array.isArray(data) ? data.find(r => r.jamoa === name) : null;
-                const cleanName = foundRow?.crm_menejer || name; // Agar topilsa to'liq ism, bo'lmasa eski nomi
- 
+                // data mavjudligini va massivligini xavfsiz tekshiramiz
+                const foundRow = (typeof data !== 'undefined' && Array.isArray(data)) 
+                  ? data.find(r => r.jamoa === name) 
+                  : null;
+        
+                const cleanName = foundRow?.crm_menejer || name;
+
                 return (
                   <div key={name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
                     <span style={{ width:20, height:20, borderRadius:'50%', background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E0E0E0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:i<3?'#fff':'#666', flexShrink:0 }}>{i+1}</span>
                     <div style={{ flex:1 }}>
-                      {/* 2. Bu yerda endi xom name emas, balki to'g'rilangan cleanName ko'rinadi */}
                       <div style={{ fontSize:12, fontWeight:700 }}>{cleanName}</div>
                       <div style={{ height:5, background:'#F0F0F0', borderRadius:3, marginTop:3 }}>
                         <div style={{ width:`${Math.round((summa/topMenejer[0][1])*100)}%`, height:'100%', background:'#1976D2', borderRadius:3 }} />

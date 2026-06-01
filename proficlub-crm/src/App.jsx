@@ -975,32 +975,31 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
 
   const totalSumma = sales.reduce((s,r)=>s+(r.summa||0), 0)
 
-  async function exportDashboard() {
+ async function exportDashboard() {
     try {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const wb = XLSX.utils.book_new()
 
-      // Tizimga yuklangan global reestr obyekti (agar mavjud bo'lsa)
-      const reestr = window.menejerReestr || {}; 
+      // 1. Xom 'data' massividan eski nom va yangi to'liq ism bog'liqligini dinamik yaratib olamiz
+      const crmMap = {};
+      if (typeof data !== 'undefined' && Array.isArray(data)) {
+        data.forEach(r => {
+          if (r.jamoa && r.crm_menejer) {
+            crmMap[r.jamoa.trim()] = r.crm_menejer.trim();
+          }
+        });
+      }
 
       const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name, summa], i) => {
-        let cleanName = name; // default holatda eski nomi qoladi
+        // 2. Agar biz yig'gan mapda bo'lsa oladi, bo'lmasa eski nomni tekshiradi
+        let cleanName = crmMap[name?.trim()] || name;
 
-        // 1. To'g'ridan-to'g'ri obyekt kaliti bo'yicha tekshirish (masalan: 'Navoiy_Dilnoza opa')
-        if (reestr[name]) {
-          cleanName = reestr[name];
-        } else {
-          // 2. Agar kalit topilmasa, reestrdagi qiymatlarni ichidan qidiramiz.
-          // Ismdagi ortiqcha bo'shliqlarni olib tashlab, solishtiramiz (Masalan: "Dilnoza opa" yoki "Дилноза опа")
-          const searchName = name.trim().toLowerCase().replace('i','и').replace('o','о');
-          
-          const foundMatch = Object.entries(reestr).find(([key, value]) => {
-            const cleanKey = key.toLowerCase().replace('i','и').replace('o','о');
-            return cleanKey.includes(searchName) || searchName.includes(cleanKey);
-          });
-
-          if (foundMatch) {
-            cleanName = foundMatch[1]; // Mos keladigan to'liq ismni oladi (Suyarova Dilnoza)
+        // 3. Qo'shimcha tekshiruv: agar "Dilnoza opa" bo'lib kelsa va mapda aniq kalit bo'lmasa
+        if (cleanName === name) {
+          const lowerName = name.trim().toLowerCase().replace('i','и');
+          const foundKey = Object.keys(crmMap).find(k => k.toLowerCase().replace('i','и').includes(lowerName));
+          if (foundKey) {
+            cleanName = crmMap[foundKey];
           }
         }
 

@@ -980,30 +980,49 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const wb = XLSX.utils.book_new()
 
-      // Access your global/state reestr object. (Ensure 'menejerReestr' matches your variable name)
+      // Tizimga yuklangan global reestr obyekti (agar mavjud bo'lsa)
       const reestr = window.menejerReestr || {}; 
 
-      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name,summa],i)=>{
-        // Look up the clean name from your registry. Fall back to original if not found.
-        const cleanName = reestr[name?.trim()] || name; 
-        
+      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name, summa], i) => {
+        let cleanName = name; // default holatda eski nomi qoladi
+
+        // 1. To'g'ridan-to'g'ri obyekt kaliti bo'yicha tekshirish (masalan: 'Navoiy_Dilnoza opa')
+        if (reestr[name]) {
+          cleanName = reestr[name];
+        } else {
+          // 2. Agar kalit topilmasa, reestrdagi qiymatlarni ichidan qidiramiz.
+          // Ismdagi ortiqcha bo'shliqlarni olib tashlab, solishtiramiz (Masalan: "Dilnoza opa" yoki "Дилноза опа")
+          const searchName = name.trim().toLowerCase().replace('i','и').replace('o','о');
+          
+          const foundMatch = Object.entries(reestr).find(([key, value]) => {
+            const cleanKey = key.toLowerCase().replace('i','и').replace('o','о');
+            return cleanKey.includes(searchName) || searchName.includes(cleanKey);
+          });
+
+          if (foundMatch) {
+            cleanName = foundMatch[1]; // Mos keladigan to'liq ismni oladi (Suyarova Dilnoza)
+          }
+        }
+
         return { 
-          '#':i+1, 
+          '#': i + 1, 
           'Жамоа (CRM)': cleanName, 
-          'Сумма':summa, 
-          'млн':(summa/1000000).toFixed(1) 
+          'Сумма': summa, 
+          'млн': (summa / 1000000).toFixed(1) 
         };
       }))
       XLSX.utils.book_append_sheet(wb, ws1, 'Top Менежерлар')
 
-      const ws2 = XLSX.utils.json_to_sheet(topDori.map(([name,v],i)=>({ '#':i+1, 'Дори':name, 'Миқдор':v.miqdor, 'Сумма':v.summa })))
+      const ws2 = XLSX.utils.json_to_sheet(topDori.map(([name, v], i) => ({ '#': i + 1, 'Дори': name, 'Миқдор': v.miqdor, 'Сумма': v.summa })))
       XLSX.utils.book_append_sheet(wb, ws2, 'Top Дорилар')
 
-      const ws3 = XLSX.utils.json_to_sheet(Object.entries(byOy).map(([oy,summa])=>({ 'Ой':oylar[Number(oy)-1], 'Сумма':summa, 'млн':(summa/1000000).toFixed(1) })))
+      const ws3 = XLSX.utils.json_to_sheet(Object.entries(byOy).map(([oy, summa]) => ({ 'Ой': oylar[Number(oy) - 1], 'Сумма': summa, 'млн': (summa / 1000000).toFixed(1) })))
       XLSX.utils.book_append_sheet(wb, ws3, 'Ойлик динамика')
 
       XLSX.writeFile(wb, `dashboard_${yil}.xlsx`)
-    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+    } catch (e) { 
+      showToast('Хатолик: ' + e.message, 'error') 
+    }
   }
 
   return (

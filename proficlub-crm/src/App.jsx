@@ -980,28 +980,10 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const wb = XLSX.utils.book_new()
 
-      // 1. Xom 'data' massividan eski nom va yangi to'liq ism bog'liqligini dinamik yaratib olamiz
-      const crmMap = {};
-      if (typeof data !== 'undefined' && Array.isArray(data)) {
-        data.forEach(r => {
-          if (r.jamoa && r.crm_menejer) {
-            crmMap[r.jamoa.trim()] = r.crm_menejer.trim();
-          }
-        });
-      }
-
       const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name, summa], i) => {
-        // 2. Agar biz yig'gan mapda bo'lsa oladi, bo'lmasa eski nomni tekshiradi
-        let cleanName = crmMap[name?.trim()] || name;
-
-        // 3. Qo'shimcha tekshiruv: agar "Dilnoza opa" bo'lib kelsa va mapda aniq kalit bo'lmasa
-        if (cleanName === name) {
-          const lowerName = name.trim().toLowerCase().replace('i','и');
-          const foundKey = Object.keys(crmMap).find(k => k.toLowerCase().replace('i','и').includes(lowerName));
-          if (foundKey) {
-            cleanName = crmMap[foundKey];
-          }
-        }
+        // Xuddi tepadagi mantiq kabi Excelga ham to'g'ri ismni yuboramiz
+        const foundRow = Array.isArray(data) ? data.find(r => r.jamoa === name) : null;
+        const cleanName = foundRow?.crm_menejer || name;
 
         return { 
           '#': i + 1, 
@@ -1019,9 +1001,7 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       XLSX.utils.book_append_sheet(wb, ws3, 'Ойлик динамика')
 
       XLSX.writeFile(wb, `dashboard_${yil}.xlsx`)
-    } catch (e) { 
-      showToast('Хатолик: ' + e.message, 'error') 
-    }
+    } catch (e) { showToast('Хатолик: ' + e.message, 'error') }
   }
 
   return (
@@ -1086,20 +1066,28 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
             {/* Top menejerlar */}
             <div style={{ ...CARD }}>
               <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>🏆 Top 10 Менежер (сумма)</div>
-              {topMenejer.map(([name,summa],i)=>(
-                <div key={name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                  <span style={{ width:20, height:20, borderRadius:'50%', background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E0E0E0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:i<3?'#fff':'#666', flexShrink:0 }}>{i+1}</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700 }}>{name}</div>
-                    <div style={{ height:5, background:'#F0F0F0', borderRadius:3, marginTop:3 }}>
-                      <div style={{ width:`${Math.round((summa/topMenejer[0][1])*100)}%`, height:'100%', background:'#1976D2', borderRadius:3 }} />
+              {topMenejer.map(([name, summa], i) => {
+      
+                // 1. data massividan ushbu xom 'name' ga mos keluvchi to'g'ri crm_menejer ismini qidiramiz
+                const foundRow = Array.isArray(data) ? data.find(r => r.jamoa === name) : null;
+                const cleanName = foundRow?.crm_menejer || name; // Agar topilsa to'liq ism, bo'lmasa eski nomi
+ 
+                return (
+                  <div key={name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <span style={{ width:20, height:20, borderRadius:'50%', background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E0E0E0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:i<3?'#fff':'#666', flexShrink:0 }}>{i+1}</span>
+                    <div style={{ flex:1 }}>
+                      {/* 2. Bu yerda endi xom name emas, balki to'g'rilangan cleanName ko'rinadi */}
+                      <div style={{ fontSize:12, fontWeight:700 }}>{cleanName}</div>
+                      <div style={{ height:5, background:'#F0F0F0', borderRadius:3, marginTop:3 }}>
+                        <div style={{ width:`${Math.round((summa/topMenejer[0][1])*100)}%`, height:'100%', background:'#1976D2', borderRadius:3 }} />
+                      </div>
                     </div>
+                    <span style={{ fontSize:12, fontWeight:800, color:'#2E7D32', whiteSpace:'nowrap' }}>{(summa/1000000).toFixed(1)}M</span>
                   </div>
-                  <span style={{ fontSize:12, fontWeight:800, color:'#2E7D32', whiteSpace:'nowrap' }}>{(summa/1000000).toFixed(1)}M</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
+            
             {/* Top dorlar */}
             <div style={{ ...CARD }}>
               <div style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>💊 Top 10 Дори (миқдор)</div>

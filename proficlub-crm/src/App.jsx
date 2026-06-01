@@ -980,7 +980,7 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
       const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
       const wb = XLSX.utils.book_new()
 
-      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name,summa],i)=>({ '#':i+1, 'Менежер':name, 'Сумма':summa, 'млн':(summa/1000000).toFixed(1) })))
+      const ws1 = XLSX.utils.json_to_sheet(topMenejer.map(([name,summa],i)=>({ '#':i+1, 'Жамоа (CRM)':name, 'Сумма':summa, 'млн':(summa/1000000).toFixed(1) })))
       XLSX.utils.book_append_sheet(wb, ws1, 'Top Менежерлар')
 
       const ws2 = XLSX.utils.json_to_sheet(topDori.map(([name,v],i)=>({ '#':i+1, 'Дори':name, 'Миқдор':v.miqdor, 'Сумма':v.summa })))

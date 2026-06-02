@@ -668,8 +668,8 @@ function SalesReport({ fetchSales, showToast }) {
     if (filters.yonalish) query = query.eq('yonalish', filters.yonalish)
     if (filters.yil) query = query.eq('yil', Number(filters.yil))
     if (filters.oy) query = query.eq('oy', Number(filters.oy))
-    if (filters.savdo_vakili) query = query.ilike('savdo_vakili', '%' + filters.savdo_vakili + '%')
-    if (filters.jamoa) query = query.ilike('jamoa', '%' + filters.jamoa + '%')
+    if (filters.savdo_vakili) query = query.or(`savdo_vakili.ilike.%${filters.savdo_vakili}%,crm_savdo_vakili.ilike.%${filters.savdo_vakili}%`)
+    if (filters.jamoa) query = query.or(`jamoa.ilike.%${filters.jamoa}%,crm_menejer.ilike.%${filters.jamoa}%`)
     if (filters.onlyUnmapped) query = query.eq('is_mapped', false)
     const { data: res, error } = await query
     if (error) throw error

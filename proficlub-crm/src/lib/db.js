@@ -11,6 +11,7 @@ export async function fetchEmployees() {
     id: row.id,
     name: row.name,
     role: row.role,
+    emp_id: row.emp_id,
     examResults: row.exam_results ?? [],
     ...row.data,
   }))

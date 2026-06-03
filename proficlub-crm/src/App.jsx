@@ -1115,7 +1115,7 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
   )
 }
 
-function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial, onEditTraining }) {
+function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial, onEditTraining, showToast }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
   const [sessions, setSessions] = useState([])
@@ -2360,6 +2360,7 @@ export default function App() {
                   onViewEmployee={goToEmployee}
                   onUploadMaterial={handleUploadMaterial}
                   onEditTraining={t=>{ setEditingTraining(t); setNewTr({ title:t.title, date:t.date, questions:t.questions?.length?t.questions:[''] }); setAddingTr(true) }}
+                  showToast={showToast}
                 />
               : !addingTr && (
                 <div>

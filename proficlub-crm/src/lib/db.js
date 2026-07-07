@@ -339,3 +339,16 @@ export async function updateEmployeeSalesStats() {
     }
   } catch(e) { console.error('updateEmployeeSalesStats error:', e) }
 }
+
+export async function fetchSurveyResponses(id, type = 'training') {
+  const col = type === 'training' ? 'training_id' : 'praktikum_id'
+  const val = type === 'training' ? id : Number(id)
+  const { data, error } = await supabase
+    .from('survey_responses')
+    .select('*')
+    .eq('type', type)
+    .eq(col, val)
+    .order('submitted_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}

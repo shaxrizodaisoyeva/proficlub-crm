@@ -7,7 +7,7 @@ import {
   addPraktikumParticipant, updatePraktikumParticipant, removePraktikumParticipant,
   fetchSales, uploadSalesBatch, deleteSalesByFilter, deleteAllSales, deleteAllPlanFakt,
   fetchPlanFakt, uploadPlanFaktBatch,
-  uploadSalesMapping, fetchSalesMapping, updateSalesMappingRow, updateEmployeeSalesStats,
+  uploadSalesMapping, fetchSalesMapping, updateSalesMappingRow, updateEmployeeSalesStats,  fetchSurveyResponses,
 } from './lib/db'
 import { supabase } from './lib/supabase'
 
@@ -356,6 +356,10 @@ function PraktikumDashboard({ prak, employees, onDelete, onEdit, onRefresh, show
             </button>
             <button onClick={()=>onEdit(prak)} style={{ ...BTN('#F0F4FF','#1565C0'), border:'1.5px solid #BBDEFB' }}>✏️ Таҳрирлаш</button>
             <button onClick={()=>onDelete(prak.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
+            <button onClick={()=>{
+              const url = 'https://proficlub-crm.vercel.app/survey/training/' + training.id
+              navigator.clipboard.writeText(url).then(()=>showToast('Ҳавола нусхаланди!')).catch(()=>{})
+            }} style={{ ...BTN('#7B1FA2') }}>📋 Сўровнома ҳаволаси</button>
             <button onClick={()=>onShowQR && onShowQR(prak)} style={{ ...BTN('#1B5E20') }}>📲 QR Давомат</button>
           </div>
         </div>
@@ -1115,6 +1119,186 @@ function SalesDashboard({ fetchSales, fetchPlanFakt, showToast }) {
   )
 }
 
+function SurveyResultsTab({ id, type, showToast }) {
+  const [responses, setResponses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState('stats') // 'stats' | 'list'
+
+  useEffect(() => {
+    fetchSurveyResponses(id, type).then(setResponses).catch(e => showToast(e.message,'error')).finally(()=>setLoading(false))
+  }, [id, type])
+
+  async function exportExcel() {
+    try {
+      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+      const rows = responses.map((r,i) => ({
+        '#': i+1,
+        'Сана': new Date(r.submitted_at).toLocaleDateString(),
+        'Умумий қиймат (1-5)': r.q1_value,
+        'Мавзуга мослик (1-5)': r.q2_value,
+        'Аниқлик (1-5)': r.q3_value,
+        'Тузилиш (1-5)': r.q4_value,
+        'Асосий хулоса': r.q5_text || '',
+        'Яхшилаш соҳалари': r.q6_text || '',
+        'Ўзгартириш таклифлари': r.q7_text || '',
+        'Келгуси мавзулар': r.q8_text || '',
+        'Қўшимча фикрлар': r.q9_text || '',
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws['!cols'] = [{wch:4},{wch:12},{wch:20},{wch:20},{wch:20},{wch:20},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35}]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Сўровнома натижалари')
+      XLSX.writeFile(wb, `survey_${id}.xlsx`)
+      showToast('Excel юкланди!')
+    } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+  }
+
+  if (loading) return <Spinner />
+
+  const avg = key => {
+    const vals = responses.map(r=>r[key]).filter(v=>v>0)
+    return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—'
+  }
+  const ratingQs = [
+    { key:'q1_value', label:'Умумий қиймат' },
+    { key:'q2_value', label:'Мавзуга мослик' },
+    { key:'q3_value', label:'Аниқлик' },
+    { key:'q4_value', label:'Тузилиш ва суръат' },
+  ]
+  const textQs = [
+    { key:'q5_text', label:'Асосий хулоса' },
+    { key:'q6_text', label:'Яхшилаш соҳалари' },
+    { key:'q7_text', label:'Ўзгартириш таклифлари' },
+    { key:'q8_text', label:'Келгуси мавзулар' },
+    { key:'q9_text', label:'Қўшимча фикрлар' },
+  ]
+
+  const surveyUrl = 'https://proficlub-crm.vercel.app/survey/' + type + '/' + id
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ ...CARD, borderTop:'4px solid #7B1FA2' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
+          <div>
+            <div style={{ fontWeight:800, fontSize:15 }}>📋 Сўровнома натижалари</div>
+            <div style={{ fontSize:13, color:'#888', marginTop:4 }}>{responses.length} та жавоб</div>
+          </div>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+            <div style={{ background:'#F3E5F5', borderRadius:10, padding:'8px 14px', fontSize:12, color:'#6A1B9A', fontWeight:700, display:'flex', alignItems:'center', gap:8, maxWidth:380, overflow:'hidden' }}>
+              🔗 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{surveyUrl}</span>
+            </div>
+            <button onClick={()=>{navigator.clipboard.writeText(surveyUrl).then(()=>showToast('Нусхаланди!'))}} style={{ ...BTN('#7B1FA2'), fontSize:12 }}>📋 Нусха</button>
+            {responses.length > 0 && <button onClick={exportExcel} style={{ ...BTN('#388E3C'), fontSize:12 }}>📥 Excel</button>}
+          </div>
+        </div>
+      </div>
+
+      {responses.length === 0 ? (
+        <div style={{ ...CARD, textAlign:'center', color:'#aaa', padding:48 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+          <div style={{ fontSize:15, fontWeight:600, marginBottom:8 }}>Ҳали жавоб йўқ</div>
+          <div style={{ fontSize:13 }}>Иштирокчиларга ҳаволани юборинг</div>
+        </div>
+      ) : (
+        <>
+          {/* View toggle */}
+          <div style={{ display:'flex', gap:6, marginBottom:14 }}>
+            {[['stats','📊 Статистика'],['list','📝 Барча жавоблар']].map(([v,l])=>(
+              <button key={v} onClick={()=>setViewMode(v)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:viewMode===v?'#7B1FA2':'#fff', color:viewMode===v?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
+            ))}
+          </div>
+
+          {viewMode === 'stats' && (
+            <div>
+              {/* Rating averages */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:10, marginBottom:14 }}>
+                {ratingQs.map(q => {
+                  const a = avg(q.key)
+                  const n = parseFloat(a)
+                  return (
+                    <div key={q.key} style={{ ...CARD, marginBottom:0, textAlign:'center' }}>
+                      <div style={{ fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:8 }}>{q.label}</div>
+                      <div style={{ fontSize:36, fontWeight:900, color: n>=4?'#2E7D32':n>=3?'#F57C00':'#C62828' }}>{a}</div>
+                      <div style={{ fontSize:11, color:'#aaa' }}>/ 5.0</div>
+                      <div style={{ height:6, background:'#F0F0F0', borderRadius:3, marginTop:10, overflow:'hidden' }}>
+                        <div style={{ width:`${n/5*100}%`, height:'100%', background:n>=4?'#4CAF50':n>=3?'#FFA726':'#EF5350', borderRadius:3 }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Distribution for each rating question */}
+              {ratingQs.map(q => {
+                const dist = [1,2,3,4,5].map(v => responses.filter(r=>r[q.key]===v).length)
+                const maxD = Math.max(...dist, 1)
+                return (
+                  <div key={q.key} style={{ ...CARD }}>
+                    <div style={{ fontWeight:700, fontSize:13, marginBottom:12 }}>{q.label} — тақсимот</div>
+                    {[5,4,3,2,1].map(v => (
+                      <div key={v} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                        <span style={{ width:30, fontSize:12, fontWeight:700, color:'#555', textAlign:'right' }}>{v} ⭐</span>
+                        <div style={{ flex:1, height:20, background:'#F0F0F0', borderRadius:6, overflow:'hidden' }}>
+                          <div style={{ width:`${Math.round(dist[v-1]/maxD*100)}%`, height:'100%', background:v>=4?'#4CAF50':v===3?'#FFA726':'#EF5350', borderRadius:6, transition:'width 0.3s' }} />
+                        </div>
+                        <span style={{ width:24, fontSize:12, fontWeight:700, color:'#555' }}>{dist[v-1]}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+
+              {/* Text responses summary */}
+              {textQs.map(q => {
+                const answers = responses.map(r=>r[q.key]).filter(Boolean)
+                if (!answers.length) return null
+                return (
+                  <div key={q.key} style={{ ...CARD }}>
+                    <div style={{ fontWeight:700, fontSize:13, marginBottom:12, color:'#1565C0' }}>{q.label} ({answers.length} та жавоб)</div>
+                    {answers.slice(0,5).map((a,i) => (
+                      <div key={i} style={{ background:'#F8F9FA', borderRadius:8, padding:'9px 12px', marginBottom:6, fontSize:13, color:'#333', lineHeight:1.5 }}>
+                        "{a}"
+                      </div>
+                    ))}
+                    {answers.length > 5 && <div style={{ fontSize:12, color:'#888', marginTop:4 }}>...ва яна {answers.length-5} та жавоб (Excel да кўринади)</div>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {viewMode === 'list' && (
+            <div>
+              {responses.map((r,i) => (
+                <div key={r.id} style={{ ...CARD, borderLeft:'4px solid #7B1FA2' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+                    <span style={{ fontWeight:700, fontSize:13, color:'#555' }}>#{i+1}</span>
+                    <span style={{ fontSize:12, color:'#888' }}>{new Date(r.submitted_at).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+                    {ratingQs.map(q => (
+                      <span key={q.key} style={{ background:scoreBg(r[q.key]*20), color:scoreColor(r[q.key]*20), borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>
+                        {q.label.split(' ')[0]}: {r[q.key]}/5
+                      </span>
+                    ))}
+                  </div>
+                  {textQs.map(q => r[q.key] ? (
+                    <div key={q.key} style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', marginBottom:3 }}>{q.label}</div>
+                      <div style={{ fontSize:13, color:'#333', background:'#F8F9FA', borderRadius:8, padding:'7px 10px' }}>{r[q.key]}</div>
+                    </div>
+                  ) : null)}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining, onViewEmployee, onUploadMaterial, onEditTraining, showToast }) {
   const [tab, setTab] = useState('overview')
   const [sortBy, setSortBy] = useState('score_desc')
@@ -1235,7 +1419,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       )}
 
       <div style={{ display:'flex', gap:6, marginBottom:14 }}>
-        {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар'],['homework','📎 Уй вазифалари']].map(([t,l])=>(
+        {[['overview','📊 Умумий'],['sessions','🏙️ Сессиялар'],['results','📋 Натижалар'],['answers','📝 Жавоблар'],['homework','📎 Уй вазифалари'],['survey','📋 Сўровнома']].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, cursor:'pointer', fontSize:12, background:tab===t?'#1976D2':'#fff', color:tab===t?'#fff':'#555', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>{l}</button>
         ))}
       </div>
@@ -1472,6 +1656,10 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
          }
        </div>
      )}
+
+      {tab==='survey' && (
+        <SurveyResultsTab id={training.id} type="training" showToast={showToast} />
+      )}
     </div>
   )
 }

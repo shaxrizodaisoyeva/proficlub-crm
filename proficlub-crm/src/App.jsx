@@ -1376,7 +1376,9 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
       <div style={{ ...CARD, borderTop:'4px solid #1976D2' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:10 }}>
           <div>
-            <div style={{ fontSize:11, color:'#1976D2', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Трениг Дашборди</div>
+            <div style={{ fontSize:11, color:'#1976D2', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>
+              {training.type==='attestatsiya'?'📝 Аттестация':training.type==='mahsulot'?'💊 Маҳсулот тренинги':'📈 Савдо тренинги'}
+            </div>
             <h2 style={{ margin:'0 0 4px', fontSize:20 }}>{training.title}</h2>
             <div style={{ fontSize:12, color:'#888' }}>{training.date} · {(training.questions||[]).length} та очиқ савол · {withResult.length}/{employees.length} натижа</div>
           </div>
@@ -1388,6 +1390,12 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               <input type="file" accept=".pdf,.pptx,.docx,.xlsx" style={{ display:'none' }} onChange={e=>onUploadMaterial(training, e.target.files[0])} />
             </label>
             <button onClick={()=>onDeleteTraining(training.id)} style={{ ...BTN('#FFEBEE','#C62828'), border:'1.5px solid #FFCDD2' }}>🗑️</button>
+            {training.type !== 'attestatsiya' && (
+              <button onClick={()=>{
+                const url = 'https://proficlub-crm.vercel.app/survey/training/' + training.id
+                navigator.clipboard.writeText(url).then(()=>showToast('Ҳавола нусхаланди!')).catch(()=>{})
+              }} style={{ ...BTN('#7B1FA2') }}>📋 Сўровнома ҳаволаси</button>
+            )}
             <button onClick={()=>exportTrainingsExcel([training], sessions, employees, 'single', [training.id], showToast)} 
               style={{ ...BTN('#388E3C'), border:'none' }}>📥 Excel Давомат</button>
             <button onClick={()=>exportDashboardToPDF(`training-dash-${training.id}`, training.title)} 
@@ -1431,7 +1439,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
               <KPI icon="📊" label="Ўртача балл" value={avg} sub={`${withResult.length} та киритилди`} color={scoreColor(avg)} />
               <KPI icon="🏆" label="Энг юқори" value={high} sub={[...withResult].sort((a,b)=>b.res.totalScore-a.res.totalScore)[0]?.emp.name.split(' ')[0]} color="#1565C0" />
               <KPI icon="⚠️" label="Энг паст" value={low} sub={[...withResult].sort((a,b)=>a.res.totalScore-b.res.totalScore)[0]?.emp.name.split(' ')[0]} color="#C62828" />
-              <KPI icon="✅" label="Ўтиш даражаси" value={`${passRate}%`} sub={`${passed.length} та ўтди`} color={passRate>=70?'#2E7D32':'#C62828'} />
+              <KPI icon="✅" label="Ўтиш даражаси" value={`${passRate}%`} sub={`${passed.length} та ўтди · ≥${training.type==='attestatsiya'?70:60} балл`} color={passRate>=70?'#2E7D32':'#C62828'} />
               <KPI icon="👥" label="Жами" value={withResult.length} sub={`${employees.length-withResult.length} та қолди`} />
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
@@ -1726,7 +1734,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
         </div>
       </div>
       <div style={{ background:'#FFF8E1', border:'1.5px solid #FFE082', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#7B5800' }}>
-        💡 Тест баллини киритинг (0–100). Ўтиш чегараси: <strong>60 балл</strong>.
+        💡 Тест баллини киритинг (0–100). Ўтиш чегараси: <strong>{training.type==='attestatsiya' ? 70 : 60} балл</strong>.
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Ходим қидириш..." style={{ ...SI, marginBottom:12 }} />
       <div style={{ ...CARD, padding:0, overflow:'auto' }}>
@@ -1922,8 +1930,9 @@ export default function App() {
   const [filterTurnover, setFilterTurnover] = useState('')
   const [addingTr, setAddingTr]   = useState(false)
   const [editingTraining, setEditingTraining] = useState(null)
-  const [newTr, setNewTr]         = useState({ title:'', date:'', questions:[''] })
+  const [newTr, setNewTr] = useState({ title:'', date:'', questions:[''], type:'savdo' })
   const [selectedTrIds, setSelectedTrIds] = useState([])
+  const [trFilter, setTrFilter] = useState('all')
   // Praktikum states
   const [selPrak, setSelPrak]     = useState(null)
   // Sales states
@@ -2053,7 +2062,7 @@ export default function App() {
     try {
       if (editingTraining) {
         const questions = newTr.questions.filter(q=>q.trim())
-        const { error } = await supabase.from('trainings').update({ title:newTr.title, date:newTr.date, questions }).eq('id', editingTraining.id)
+        const { error } = await supabase.from('trainings').update({ title:newTr.title, date:newTr.date, questions, type:newTr.type, meta: newTr.type==='attestatsiya' ? { min_pass_score:70 } : {} }).eq('id', editingTraining.id)
         if (error) throw error
         setTrainings(p => p.map(t => t.id === editingTraining.id ? { ...t, title:newTr.title, date:newTr.date, questions } : t))
         setSelTraining(prev => ({ ...prev, title:newTr.title, date:newTr.date, questions }))
@@ -2061,7 +2070,7 @@ export default function App() {
         savedId = editingTraining.id
         setEditingTraining(null)
       } else {
-        const created = await createTraining({ ...newTr, questions:newTr.questions.filter(q=>q.trim()) })
+        const created = await createTraining({ ...newTr, questions:newTr.questions.filter(q=>q.trim()), type:newTr.type, meta: newTr.type==='attestatsiya' ? { min_pass_score:70 } : {} })
         setTrainings(p=>[created,...p])
         setSelTraining(created)
         showToast(`"${created.title}" тренинги яратилди`)
@@ -2278,7 +2287,10 @@ export default function App() {
               const count = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id)).length
               return (
                 <div key={t.id} onClick={()=>{ setSelTraining(t); setBulkMode(false) }} style={{ padding:'9px 14px', cursor:'pointer', borderLeft:selTraining?.id===t.id&&!bulkMode?'3px solid #1976D2':'3px solid transparent', background:selTraining?.id===t.id&&!bulkMode?'#EEF4FF':'transparent' }}>
-                  <div style={{ fontWeight:700, fontSize:13 }}>{t.title}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span>{t.type==='attestatsiya'?'📝':t.type==='mahsulot'?'💊':'📈'}</span>
+                    <span style={{ fontWeight:700, fontSize:13 }}>{t.title}</span>
+                  </div>
                   <div style={{ fontSize:11, color:'#888' }}>{t.date} · {count} натижа</div>
                 </div>
               )
@@ -2524,6 +2536,18 @@ export default function App() {
                 <input value={newTr.title} onChange={e=>setNewTr(p=>({...p,title:e.target.value}))} placeholder="Тренинг номи" style={{ ...SI, marginBottom:10 }} />
                 <label style={LBL}>Сана</label>
                 <input type="text" value={newTr.date} onChange={e=>setNewTr(p=>({...p,date:e.target.value}))} placeholder="2025-03-18" style={{ ...SI, marginBottom:10 }} />
+                <label style={LBL}>Тренинг тури</label>
+                <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                  {[['savdo','📈 Савдо тренинги'],['mahsulot','💊 Маҳсулот тренинги'],['attestatsiya','📝 Аттестация']].map(([v,l])=>(
+                    <button key={v} onClick={()=>setNewTr(p=>({...p,type:v}))}
+                      style={{ flex:1, padding:'8px', borderRadius:8, border:'2px solid', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit',
+                        borderColor:newTr.type===v?'#1976D2':'#E0E0E0',
+                        background:newTr.type===v?'#1976D2':'#fff',
+                        color:newTr.type===v?'#fff':'#555' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
                 <label style={LBL}>Очиқ саволлар</label>
                 {newTr.questions.map((q,i)=>(
                   <div key={i} style={{ display:'flex', gap:6, marginBottom:6 }}>
@@ -2531,6 +2555,11 @@ export default function App() {
                     {newTr.questions.length>1 && <button onClick={()=>setNewTr(p=>({...p,questions:p.questions.filter((_,j)=>j!==i)}))} style={{ ...BTN('#FFEBEE','#C62828'), padding:'6px 10px' }}>✕</button>}
                   </div>
                 ))}
+                {newTr.type==='attestatsiya' && (
+                  <div style={{ background:'#FFF8E1', border:'1.5px solid #FFE082', borderRadius:10, padding:'10px 14px', marginBottom:10, fontSize:13, color:'#7B5800', fontWeight:600 }}>
+                   ⚠️ Аттестация учун ўтиш бали: <strong>70 балл</strong>
+                  </div>
+                )}
                 <button onClick={()=>setNewTr(p=>({...p,questions:[...p.questions,'']}))} style={{ ...BTN('#F0F4FF','#1565C0'), marginBottom:14, fontSize:12 }}>+ Савол қўшиш</button>
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={handleAddTraining} disabled={saving||!newTr.title.trim()} style={{ ...BTN('#1976D2'), flex:1, opacity:newTr.title.trim()?1:0.4 }}>{saving?'Сақланяпти...':'Сақлаш'}</button>
@@ -2547,12 +2576,25 @@ export default function App() {
                   onDeleteTraining={handleDeleteTraining}
                   onViewEmployee={goToEmployee}
                   onUploadMaterial={handleUploadMaterial}
-                  onEditTraining={t=>{ setEditingTraining(t); setNewTr({ title:t.title, date:t.date, questions:t.questions?.length?t.questions:[''] }); setAddingTr(true) }}
+                  onEditTraining={t=>{ setEditingTraining(t); setNewTr({ title:t.title, date:t.date, questions:t.questions?.length?t.questions:[''], type:t.type||'savdo' }); setAddingTr(true) }}
                   showToast={showToast}
                 />
               : !addingTr && (
                 <div>
-                  <h2 style={{ marginTop:0, marginBottom:14, fontSize:17 }}>Барча тренинглар ({trainings.length})</h2>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, flexWrap:'wrap', gap:8 }}>
+                    <h2 style={{ margin:0, fontSize:17 }}>Барча тренинглар ({trainings.length})</h2>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {[['all','Барчаси'],['savdo','📈 Савдо'],['mahsulot','💊 Маҳсулот'],['attestatsiya','📝 Аттестация']].map(([v,l])=>(
+                        <button key={v} onClick={()=>setTrFilter(v)}
+                          style={{ padding:'5px 12px', borderRadius:20, border:'1.5px solid', fontSize:11, fontWeight:700, cursor:'pointer',
+                            borderColor:trFilter===v?'#1976D2':'#E0E0E0',
+                            background:trFilter===v?'#1976D2':'#fff',
+                            color:trFilter===v?'#fff':'#555' }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
                     <button onClick={()=>exportTrainingsExcel(trainings, [], employees, 'all', [], showToast)}
                       style={{ ...BTN('#388E3C') }}>📥 Барча тренинглар Excel</button>
@@ -2566,7 +2608,7 @@ export default function App() {
                      )}
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
-                    {trainings.map(t=>{
+                    {trainings.filter(t=>trFilter==='all'||t.type===trFilter).map(t=>{
                       const wr = employees.filter(e=>e.examResults?.some(r=>r.trainingId===t.id))
                       const sc2 = wr.map(e=>e.examResults.find(r=>r.trainingId===t.id).totalScore)
                       const avg2 = sc2.length ? Math.round(sc2.reduce((a,b)=>a+b,0)/sc2.length) : null
@@ -2579,7 +2621,10 @@ export default function App() {
                               style={{ width:16, height:16, cursor:'pointer' }} />
                           </div>
                           <div onClick={()=>setSelTraining(t)}>
-                          <div style={{ fontWeight:800, fontSize:14, marginBottom:4 }}>{t.title}</div>
+                          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                            <span style={{ fontSize:16 }}>{t.type==='attestatsiya'?'📝':t.type==='mahsulot'?'💊':'📈'}</span>
+                            <span style={{ fontWeight:800, fontSize:14 }}>{t.title}</span>
+                          </div>
                           <div style={{ fontSize:11, color:'#888', marginBottom:10 }}>{t.date}</div>
                           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                             <span style={{ background:'#EEF4FF', color:'#1565C0', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{wr.length} натижа</span>

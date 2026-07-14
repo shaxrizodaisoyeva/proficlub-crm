@@ -56,8 +56,9 @@ export async function fetchTrainings() {
   date: row.date,
   questions: row.questions ?? [],
   materials: row.materials ?? [],
-  }))
-}
+  type: row.type || 'savdo',
+  meta: row.meta ?? {},
+}))
 
 export async function createTraining(tr) {
   const id = 't' + Date.now()

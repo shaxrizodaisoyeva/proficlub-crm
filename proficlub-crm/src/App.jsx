@@ -1350,6 +1350,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   }
 
   const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
+  console.log('training type:', training.type)
   const withResult = results.filter(x=>x.res)
   const scores     = withResult.map(x=>x.res.totalScore)
   const passed     = withResult.filter(x=>x.res.passed)

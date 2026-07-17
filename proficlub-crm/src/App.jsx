@@ -1349,16 +1349,17 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
     } catch(e) { console.error(e) }
   }
 
-  const results    = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
-  console.log('training type:', training.type)
+  const results = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
   const withResult = results.filter(x=>x.res)
+  const onlyWithResult = results.filter(x=>x.res)
+  console.log('training type:', training.type)
   const scores     = withResult.map(x=>x.res.totalScore)
   const passed     = withResult.filter(x=>x.res.passed)
   const avg        = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null
   const high       = scores.length ? Math.max(...scores) : null
   const low        = scores.length ? Math.min(...scores) : null
   const passRate   = withResult.length ? Math.round((passed.length/withResult.length)*100) : 0
-  const sorted     = [...results].sort((a,b)=>sortBy==='score_desc'?(b.res?.totalScore??-1)-(a.res?.totalScore??-1):sortBy==='score_asc'?(a.res?.totalScore??999)-(b.res?.totalScore??999):a.emp.name.localeCompare(b.emp.name))
+  const sorted = [...withResult].sort((a,b)=>sortBy==='score_desc'?(b.res?.totalScore??-1)-(a.res?.totalScore??-1):sortBy==='score_asc'?(a.res?.totalScore??999)-(b.res?.totalScore??999):a.emp.name.localeCompare(b.emp.name))
   const byRole     = ROLES.map(role=>{ const rs=withResult.filter(x=>x.emp.role===role).map(x=>x.res.totalScore); return {role,count:rs.length,avg:rs.length?Math.round(rs.reduce((a,b)=>a+b,0)/rs.length):null} }).filter(r=>r.count>0)
   const bandCounts = [[90,100,'#2E7D32'],[80,89,'#66BB6A'],[70,79,'#FFA726'],[60,69,'#EF5350'],[0,59,'#B71C1C']].map(([min,max,color])=>({ label:`${min}–${max}`, min, max, color, count:scores.filter(s=>s>=min&&s<=max).length }))
   const maxBand    = Math.max(...bandCounts.map(b=>b.count),1)
@@ -1473,7 +1474,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 ))}
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10, marginTop:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:14 }}>
               {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].filter(x=>x.res.totalScore>=60).sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
                 { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
               ].map(({ label, arr, border, titleColor, medals, medalText='#fff' }) => (
@@ -1481,10 +1482,13 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                 <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>
                   <div style={{ fontWeight:800, fontSize:14, marginBottom:12, color:titleColor }}>{label}</div>
                   {arr.map((x,i)=>(
-                    <div key={x.emp.id} onClick={()=>onViewEmployee(x.emp.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #F5F5F5', cursor:'pointer' }}>
-                      <span style={{ width:22,height:22,borderRadius:'50%',background:medals[i],display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,color:medalText,flexShrink:0 }}>{i+1}</span>
-                      <Avatar name={x.emp.name} size={28} />
-                      <div style={{ flex:1 }}><div style={{ fontWeight:700, fontSize:13 }}>{x.emp.name}</div><Badge role={x.emp.role} /></div>
+                    <div key={x.emp.id} onClick={()=>onViewEmployee(x.emp.id)} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:'1px solid #F5F5F5', cursor:'pointer', flexWrap:'wrap' }}>
+                      <span style={{ width:24,height:24,borderRadius:'50%',background:medals[i],display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,color:medalText,flexShrink:0,marginTop:2 }}>{i+1}</span>
+                      <Avatar name={x.emp.name} size={30} />
+                      <div style={{ flex:1, minWidth:80 }}>
+                        <div style={{ fontWeight:700, fontSize:13, lineHeight:1.3, marginBottom:3 }}>{x.emp.name}</div>
+                        <Badge role={x.emp.role} />
+                      </div>
                       <ScorePill score={x.res.totalScore} passed={x.res.passed} />
                     </div>
                   ))}

@@ -1400,6 +1400,34 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
             )}
             <button onClick={()=>exportTrainingsExcel([training], sessions, employees, 'single', [training.id], showToast)} 
               style={{ ...BTN('#388E3C'), border:'none' }}>📥 Excel Давомат</button>
+            <button onClick={async ()=>{
+              try {
+                const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm')
+                const rows = employees
+                  .map(emp => {
+                    const res = emp.examResults?.find(r => r.trainingId === training.id)
+                    return {
+                      'Ходим': emp.name,
+                      'Лавозим': emp.role,
+                      'Ташкилот': Array.isArray(emp.organization) ? emp.organization.join(', ') : (emp.organization || '—'),
+                      'Балл': res ? res.totalScore : '—',
+                      'Ҳолати': res ? (res.passed ? 'Ўтди ✓' : 'Ўтмади ✗') : 'Киритилмаган',
+                      'Сана': res ? res.date : '—',
+                    }
+                  })
+                  .sort((a,b) => {
+                    if (a['Балл'] === '—') return 1
+                    if (b['Балл'] === '—') return -1
+                    return b['Балл'] - a['Балл']
+                  })
+                const ws = XLSX.utils.json_to_sheet(rows)
+                ws['!cols'] = [{wch:28},{wch:16},{wch:14},{wch:8},{wch:14},{wch:12}]
+                const wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, 'Натижалар')
+                XLSX.writeFile(wb, `natijalar_${training.title.replace(/\s+/g,'_')}_${training.date}.xlsx`)
+                showToast('Excel юкланди!')
+              } catch(e) { showToast('Хатолик: ' + e.message, 'error') }
+            }} style={{ ...BTN('#1565C0'), border:'none' }}>📊 Excel Натижалар</button>
             <button onClick={()=>exportDashboardToPDF(`training-dash-${training.id}`, training.title)} 
               style={{ ...BTN('#7B1FA2'), border:'none' }}>📄 PDF</button>
           </div>

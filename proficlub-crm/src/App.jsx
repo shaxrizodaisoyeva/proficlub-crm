@@ -1714,7 +1714,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
     const init = {}
     employees.forEach(e=>{
       const ex = e.examResults?.find(r=>r.trainingId===training.id)
-      if (ex) init[e.id] = { mcScore:ex.mcScore, openAnswers:ex.openAnswers?.reduce((a,x)=>({...a,[x.q]:x.a}),{})||{}, homeworkUrl:ex.homeworkUrl||'', homeworkName:ex.homeworkName||'' }
+      if (ex) init[e.id] = { mcScore:ex.mcScore, openAnswers:ex.openAnswers?.reduce((a,x)=>({...a,[x.q]:x.a}),{})||{}, homeworkUrl:ex.homeworkUrl||'', homeworkName:ex.homeworkName||'', testFileUrl:ex.testFileUrl||'', testFileName:ex.testFileName||'' }
     })
     setScores(init)
   },[training.id, employees])
@@ -1744,7 +1744,9 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
           score: (s.mcScore !== '' && s.mcScore != null) ? Number(s.mcScore) : null,
           openAnswers: (training.questions || []).map(q => ({ q, a: s.openAnswers?.[q] || '' })), 
           homeworkUrl: s.homeworkUrl || '', 
-          homeworkName: s.homeworkName || '' 
+          homeworkName: s.homeworkName || '',
+          testFileUrl: s.testFileUrl || '',
+          testFileName: s.testFileName || '',
         }));
       await saveBulkExamResults(training, updates)
       onToast(`${updates.length} та натижа сақланди`)

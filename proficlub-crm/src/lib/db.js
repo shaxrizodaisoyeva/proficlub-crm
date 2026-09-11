@@ -96,11 +96,13 @@ export async function saveBulkExamResults(training, updates) {
     const newResult = {
       trainingId: training.id,
       date: training.date,
-      mcScore: update.score ?? 0,
-      totalScore: update.score ?? 0,
-      passed: update.score != null && update.score >= (training.type === 'attestatsiya' ? 70 : 60),
+      mcScore: hasScore ? update.score : null,
+      totalScore: hasScore ? update.score : null,
+      passed: hasScore ? update.score >= (training.type === 'attestatsiya' ? 70 : 60) : null,
       homeworkUrl: update.homeworkUrl || '',
       homeworkName: update.homeworkName || '',
+      testFileUrl: update.testFileUrl || '',
+      testFileName: update.testFileName || '',
       openAnswers: update.openAnswers ?? [],
     }
     return supabase

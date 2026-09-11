@@ -1722,7 +1722,8 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
   const filledCount = Object.keys(scores).filter(id => {
     const s = scores[id];
     return (s?.mcScore !== '' && s?.mcScore != null) || 
-         (!!s?.homeworkUrl) || 
+         (!!s?.homeworkUrl) ||
+         (!!s?.testFileUrl) ||
          (s?.openAnswers && Object.values(s.openAnswers).some(ans => ans && ans.trim() !== ''));
   }).length;
   const sessionEmpIds = session?.session_participants?.map(p => p.employee_id) || null
@@ -1736,8 +1737,9 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
         .filter(([, s]) => {
           const hasScore = s?.mcScore !== '' && s?.mcScore != null;
           const hasHomework = !!s?.homeworkUrl;
+          const hasTestFile = !!s?.testFileUrl;
           const hasAnswers = s?.openAnswers && Object.values(s.openAnswers).some(ans => ans && ans.trim() !== '');
-          return hasScore || hasHomework || hasAnswers;
+          return hasScore || hasHomework || hasTestFile || hasAnswers;
         })
         .map(([empId, s]) => ({ 
           empId: Number(empId), 

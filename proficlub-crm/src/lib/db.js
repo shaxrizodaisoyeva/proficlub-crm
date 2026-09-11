@@ -93,6 +93,7 @@ export async function saveBulkExamResults(training, updates) {
     const update = updates.find(u => u.empId === row.id)
     if (!update) return Promise.resolve()
     const existing = (row.exam_results ?? []).filter(r => r.trainingId !== training.id)
+    const hasScore = update.score !== null && update.score !== undefined && update.score !== ''
     const newResult = {
       trainingId: training.id,
       date: training.date,

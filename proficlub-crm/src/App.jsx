@@ -1350,7 +1350,8 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   }
 
   const results = employees.map(e => ({ emp:e, res:e.examResults?.find(r=>r.trainingId===training.id) }))
-  const withResult = results.filter(x=>x.res && (x.res.totalScore != null || x.res.homeworkUrl || x.res.testFileUrl))
+  const withResult = results.filter(x=>x.res && x.res.totalScore != null)
+  const withFileOnly = results.filter(x=>x.res && x.res.totalScore == null && (x.res.homeworkUrl || x.res.testFileUrl))
   console.log('training type:', training.type)
   const scores = withResult.map(x=>x.res.totalScore).filter(s => s != null)
   const passed = withResult.filter(x=>x.res.passed === true)
@@ -1503,7 +1504,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:14 }}>
               {[{ label:'🥇 Top 3 иштирокчи', arr:[...withResult].filter(x=>x.res.totalScore>=60).sort((a,b)=>b.res.totalScore-a.res.totalScore).slice(0,3), border:'#4CAF50', titleColor:'#2E7D32', medals:['#FFD700','#C0C0C0','#CD7F32'] },
-                { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
+                { label:'⚠️ Эътибор талаб', arr:[...withResult].filter(x=>x.res.totalScore!=null && x.res.totalScore<50).sort((a,b)=>a.res.totalScore-b.res.totalScore).slice(0,3), border:'#EF5350', titleColor:'#C62828', medals:['#FFEBEE','#FFEBEE','#FFEBEE'], medalText:'#C62828' }
               ].map(({ label, arr, border, titleColor, medals, medalText='#fff' }) => (
                 arr.length === 0 && label.includes('Эътибор') ? null :
                 <div key={label} style={{ ...CARD, marginBottom:0, borderLeft:`4px solid ${border}` }}>

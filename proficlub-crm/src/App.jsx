@@ -120,8 +120,8 @@ function Avatar({ name, size = 40 }) {
   )
 }
 function ScorePill({ score, passed }) {
-  if (score == null) return null
-  return <span style={{ background:scoreBg(score), color:scoreColor(score), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{score}/100 {passed ? '✓' : '✗'}</span>
+  if (score == null || score === 0 && passed == null) return null
+  return <span style={{ background:scoreBg(score), color:scoreColor(score), borderRadius:20, padding:'2px 10px', fontSize:12, fontWeight:800 }}>{score}/100 {passed === true ? '✓' : passed === false ? '✗' : ''}</span>
 }
 function MiniBar({ value, max, color }) {
   const pct = max > 0 ? Math.round((value/max)*100) : 0
@@ -1627,7 +1627,7 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
                   <td style={{ padding:'9px 14px' }}><div style={{ display:'flex', alignItems:'center', gap:8 }}><Avatar name={emp.name} size={26} /><span style={{ fontWeight:600 }}>{emp.name}</span></div></td>
                   <td style={{ padding:'9px 14px' }}><Badge role={emp.role} /></td>
                   <td style={{ padding:'9px 14px' }}>{res
-                    ? <div style={{ display:'flex', alignItems:'center', gap:8 }}><span style={{ fontWeight:900, fontSize:15, color:scoreColor(res.totalScore) }}>{res.totalScore}</span><div style={{ width:60, height:6, background:'#F0F0F0', borderRadius:3, overflow:'hidden' }}><div style={{ width:`${res.totalScore}%`, height:'100%', background:scoreColor(res.totalScore), borderRadius:3 }} /></div></div>
+                    ? <div style={{ display:'flex', alignItems:'center', gap:8 }}><span style={{ fontWeight:900, fontSize:15, color:scoreColor(res.totalScore) }}>{res.totalScore != null ? res.totalScore : '—'}</span><div style={{ width:60, height:6, background:'#F0F0F0', borderRadius:3, overflow:'hidden' }}><div style={{ width:`${res.totalScore}%`, height:'100%', background:scoreColor(res.totalScore), borderRadius:3 }} /></div></div>
                     : <span style={{ color:'#ddd' }}>—</span>}</td>
                   <td style={{ padding:'9px 14px' }}>{res ? <ScorePill score={res.totalScore} passed={res.passed} /> : <span style={{ fontSize:11, color:'#ccc' }}>Киритилмаган</span>}</td>
                   <td style={{ padding:'9px 14px', color:'#888', fontSize:12 }}>{res?.date||'—'}</td>
@@ -1782,6 +1782,7 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
                 </th>
               ))}
               <th style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:160 }}>Уй вазифаси</th>
+              <th style={{ padding:'10px 12px', textAlign:'left', fontSize:10, color:'#888', fontWeight:700, textTransform:'uppercase', minWidth:160 }}>Тест файли</th>
             </tr>
           </thead>
           <tbody>
@@ -1859,7 +1860,36 @@ function BulkEntry({ training, employees, session, onSave, onCancel, onToast }) 
                           e.target.value = ""; // Inputни тозалаш
                         }
                       }} />
-                     </label>
+                    </label>
+                  }
+                </td>
+                <td style={{ padding:'7px 10px' }}>
+                  {scores[emp.id]?.testFileUrl
+                    ? <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <a href={scores[emp.id].testFileUrl} target="_blank" rel="noreferrer"
+                        style={{ fontSize:11, color:'#1565C0', fontWeight:700, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>
+                        📄 {scores[emp.id].testFileName}
+                      </a>
+                      <button onClick={()=>setScores(p=>({...p,[emp.id]:{...p[emp.id],testFileUrl:'',testFileName:''}}))}
+                        style={{ background:'#FFEBEE', color:'#C62828', border:'1.5px solid #FFCDD2', borderRadius:6, padding:'2px 6px', fontSize:10, cursor:'pointer' }}>✕</button>
+                    </div>
+                  : <label style={{ display:'inline-flex', alignItems:'center', gap:4, background:'#F0F4FF', color:'#1565C0', borderRadius:7, padding:'5px 8px', fontSize:11, fontWeight:700, cursor:'pointer', border:'1.5px solid #BBDEFB' }}>
+                      📄 Юклаш
+                      <input type="file" style={{ display:'none' }} onChange={async e => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        try {
+                          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+                          const path = `testfiles/${training.id}/${emp.id}/${Date.now()}_${safeName}`
+                          const { error: upErr } = await supabase.storage.from('training-materials').upload(path, file, { upsert: true })
+                          if (upErr) throw upErr
+                          const { data: { publicUrl } } = supabase.storage.from('training-materials').getPublicUrl(path)
+                          setScores(p => ({...p, [emp.id]: {...p[emp.id], testFileUrl: publicUrl, testFileName: file.name}}))
+                          onToast('Файл юкланди', 'success')
+                        } catch(err) { onToast('Хатолик: ' + err.message, 'error') }
+                        finally { e.target.value = '' }
+                       }} />
+                      </label>
                     }
                   </td>
                 </tr>
@@ -2502,8 +2532,27 @@ export default function App() {
                           <ScorePill score={r.totalScore} passed={r.passed} />
                         </div>
                         <div style={{ display:'flex', gap:7, marginBottom:r.openAnswers?.length?10:0, flexWrap:'wrap' }}>
-                          <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>Тест: {r.mcScore}/100</span>
-                          <span style={{ background:r.passed?'#E8F5E9':'#FFEBEE', color:r.passed?'#2E7D32':'#C62828', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{r.passed?'Ўтди ✓':'Ўтмади ✗'}</span>
+                          {r.mcScore != null && (
+                            <span style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>Тест: {r.mcScore}/100</span>
+                          )}
+                          {r.passed != null && (
+                            <span style={{ background:r.passed?'#E8F5E9':'#FFEBEE', color:r.passed?'#2E7D32':'#C62828', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>{r.passed?'Ўтди ✓':'Ўтмади ✗'}</span>
+                          )}
+                          {!r.mcScore && r.passed == null && (
+                            <span style={{ background:'#F5F5F5', color:'#888', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700 }}>📝 Баҳосиз</span>
+                          )}
+                          {r.homeworkUrl && (
+                            <a href={r.homeworkUrl} target="_blank" rel="noreferrer"
+                              style={{ background:'#E8F5E9', color:'#2E7D32', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4, border:'1.5px solid #A5D6A7' }}>
+                              📎 {r.homeworkName || 'Уй вазифаси'} ⬇
+                            </a>
+                          )}
+                          {r.testFileUrl && (
+                            <a href={r.testFileUrl} target="_blank" rel="noreferrer"
+                              style={{ background:'#F0F4FF', color:'#1565C0', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4, border:'1.5px solid #BBDEFB' }}>
+                              📄 {r.testFileName || 'Тест файли'} ⬇
+                            </a>
+                          )}
                         </div>
                         {r.openAnswers?.length>0 && (
                           <div>

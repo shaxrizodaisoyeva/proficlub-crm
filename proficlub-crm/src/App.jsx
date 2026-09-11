@@ -1353,8 +1353,8 @@ function TrainingDashboard({ training, employees, onBulkEntry, onDeleteTraining,
   const withResult = results.filter(x=>x.res)
   const onlyWithResult = results.filter(x=>x.res)
   console.log('training type:', training.type)
-  const scores     = withResult.map(x=>x.res.totalScore)
-  const passed     = withResult.filter(x=>x.res.passed)
+  const scores = withResult.map(x=>x.res.totalScore).filter(s => s != null)
+  const passed = withResult.filter(x=>x.res.passed === true)
   const avg        = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null
   const high       = scores.length ? Math.max(...scores) : null
   const low        = scores.length ? Math.min(...scores) : null

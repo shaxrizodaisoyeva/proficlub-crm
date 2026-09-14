@@ -318,7 +318,7 @@ export default function Attendance() {
         ) : (
           <>
             <h2 style={{ margin: '0 0 16px', fontSize: 17, fontWeight: 900, color: '#1A1A2E', textAlign: 'center' }}>
-              Сиз шу шаҳарданмисиз?
+              Тренинг шу шаҳарда бўляптими?
             </h2>
             <div style={{ background: '#E8F5E9', border: '2px solid #A5D6A7', borderRadius: 14, padding: '20px', textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: 32, fontWeight: 900, color: '#1B5E20' }}>{detectedCity}</div>
